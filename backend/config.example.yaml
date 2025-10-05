@@ -1,0 +1,5 @@
+# example config (structure only)
+# finalized keys will be added later; keep this file to anchor the folder.
+server: {}
+auth: {}
+logging: {}

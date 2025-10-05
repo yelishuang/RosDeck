@@ -1,0 +1,9 @@
+# structure-only placeholder; not a final systemd unit
+[Unit]
+Description=RosDeck Backend (structure scaffold)
+
+[Service]
+ExecStart=/bin/true
+
+[Install]
+WantedBy=multi-user.target
