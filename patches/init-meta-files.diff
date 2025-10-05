@@ -1,0 +1,85 @@
+diff --git a/.gitattributes b/.gitattributes
+new file mode 100644
+--- /dev/null
++++ b/.gitattributes
+@@ -0,0 +15 @@
++# Normalize line endings; keep binaries untouched
++* text=auto
++
++# Treat assets and fonts as binary
++*.png binary
++*.jpg binary
++*.jpeg binary
++*.gif binary
++*.webp binary
++*.svg text eol=lf
++*.woff binary
++*.woff2 binary
++*.ttf binary
++*.pdf binary
++*.zip binary
+diff --git a/.gitignore b/.gitignore
+new file mode 100644
+--- /dev/null
++++ b/.gitignore
+@@ -0,0 +34 @@
++# OS / editors
++.DS_Store
++Thumbs.db
++.idea/
++.vscode/*
++!.vscode/settings.json
++*.swp
++
++# Node / tooling (if used later)
++node_modules/
++dist/
++build/
++tmp/
++.cache/
++coverage/
++
++# Logs
++*.log
++npm-debug.log*
++yarn-debug.log*
++yarn-error.log*
++
++# Archives
++*.zip
++*.tar
++*.tgz
++
++# Local env
++.env
++.env.*
++
++# Python local server cache
++__pycache__/
++*.pyc
+diff --git a/SECURITY.md b/SECURITY.md
+new file mode 100644
+--- /dev/null
++++ b/SECURITY.md
+@@ -0,0 +21 @@
++# Security Policy
++
++This project targets LAN deployments for ROS 2 developer boards. Still, please follow:
++
++## Authentication
++- Use **Nginx auth_request** or backend middleware as the gatekeeper.
++- On login success, set **HttpOnly + Secure + SameSite** cookies on the server side.
++- Do **not** persist access tokens in the frontend.
++
++## Transport
++- Prefer HTTPS when accessible (self-signed certs are OK in LAN with proper trust).
++
++## Rate limiting
++- Apply server-side throttling on `/api/auth/login`; return `429` with `Retry-After`.
++
++## File & Terminal APIs
++- Restrict upload paths and sanitize filenames.
++- Log and audit terminal access. Disable dangerous commands in production if possible.
++
++## Vulnerability reporting
++If you discover a vulnerability, please open a private report or contact the maintainer.
