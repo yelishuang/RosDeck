@@ -1,0 +1,215 @@
+/* ===== 设计变量 ===== */
+:root{
+  --glass-stroke: rgba(255,255,255,.18);
+  --text-strong: #f4f7fb;
+  --text-normal: #dde4ec;
+  --text-muted: #9aa4af;
+
+  --ink: #0f1a26;                 /* 输入框内文字的深色 */
+  --ink-soft: rgba(15,26,38,.6);
+  --field-bg: rgba(255,255,255,.75);      /* 半透明白底，强对比 */
+  --field-bg-focus: rgba(255,255,255,.92);
+  --field-border: rgba(0,0,0,.08);
+  --field-border-focus: rgba(35,165,255,.9);
+
+  --primary: #8fd5ff;
+  --primary-strong: #59baf4;
+  --accent: #23b1ff;
+
+  --shadow: 0 14px 48px rgba(0,0,0,.28);
+  --radius-2xl: 22px;
+  --radius-xl: 16px;
+  --radius-lg: 12px;
+
+  --space: clamp(22px, 2.6vw, 32px);
+  --w-card: clamp(680px, 44vw, 960px);
+}
+
+*,
+*::before,
+*::after{ box-sizing: border-box; }
+
+html,body{ height:100%; }
+body{
+  margin:0;
+  color:var(--text-normal);
+  font:500 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue",
+       "PingFang SC","Noto Sans CJK SC","Microsoft YaHei", Arial, "Apple Color Emoji",
+       "Segoe UI Emoji","Segoe UI Symbol", sans-serif;
+  background:#0c1116;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* 背景 */
+.bg{ position:fixed; inset:0; overflow:clip; z-index:-1; }
+.bg__image{
+  position:absolute; inset:-3vh -2vw;
+  background-image:url("../assets/images/ros.jpeg");
+  background-size:cover; background-position:center 42%;
+  filter:saturate(115%) brightness(1.02) contrast(1.0);
+  transform:scale(1.01);
+}
+.bg__vignette{
+  position:absolute; inset:0;
+  background:radial-gradient(120% 85% at 50% 40%, transparent 0 70%, rgba(0,0,0,.16) 100%);
+  pointer-events:none;
+}
+.bg__gradient{
+  position:absolute; inset:0;
+  background:
+    linear-gradient(180deg, rgba(8,12,18,.34) 0%, rgba(8,12,18,.14) 38%, rgba(8,12,18,.30) 100%),
+    radial-gradient(60% 50% at 20% 0%, rgba(120, 200, 255, .10) 0%, transparent 60%),
+    radial-gradient(50% 45% at 90% 10%, rgba(255, 150, 200, .06) 0%, transparent 60%);
+  mix-blend-mode:screen;
+  pointer-events:none;
+}
+
+/* 布局 */
+.page{
+  min-height:100dvh;
+  padding:clamp(20px, 4vw, 56px);
+  display:grid; place-items:center;
+}
+
+/* 登录面板 */
+.login-panel{
+  width:var(--w-card) !important; max-width:96vw !important; min-width:620px;
+  margin:0 auto;
+  backdrop-filter: blur(16px) saturate(125%);
+  -webkit-backdrop-filter: blur(16px) saturate(125%);
+  background:linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.07));
+  border:1px solid var(--glass-stroke);
+  box-shadow:var(--shadow);
+  border-radius:var(--radius-2xl);
+  padding:var(--space);
+}
+
+.login-card__header{
+  display:grid; grid-template-columns:72px 1fr; gap:18px; align-items:center;
+  margin-bottom:calc(var(--space) * .7);
+}
+.brand__logo{
+  width:72px; height:72px; border-radius:14px; padding:8px;
+  background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.14);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.04);
+}
+.brand__title{ margin:0; font-weight:800; font-size:clamp(22px,2.2vw,28px); color:#8fd5ff; }
+.brand__subtitle{ margin:4px 0 0; font-size:14px; color:var(--text-muted); }
+
+/* 表单整体 */
+.login-card__form{ display:grid; gap:18px; }
+
+/* 浮动标签输入框：对比度高，带动态高光条与呼吸光晕 */
+.form-group{ position:relative; }
+.floating input{
+  width:100%;
+  padding:22px 48px 12px 16px;             /* 上边留空间给浮动标签；右边给眼睛按钮 */
+  font-size:17px; line-height:1.3; font-weight:700; /* 文字更粗更清晰 */
+  color:var(--ink);
+  background:var(--field-bg);
+  border:1px solid var(--field-border);
+  border-radius:14px;
+  outline:none;
+  transition:border-color .18s ease, background-color .18s ease, box-shadow .18s ease, transform .06s ease;
+}
+.floating input::placeholder{ color:transparent; } /* 用浮动标签，不显示占位符文案 */
+
+.fl-label{
+  position:absolute; left:14px; top:12px;
+  font-size:14px; color:var(--ink-soft);
+  transform-origin:left top;
+  transition:transform .18s ease, color .18s ease, background-color .18s ease, padding .18s ease;
+  pointer-events:none; user-select:none;
+}
+
+/* 动态下划线条 */
+.focus-bar{
+  position:absolute; left:12px; right:12px; height:2px; bottom:12px;
+  background:linear-gradient(90deg, rgba(143,213,255,.0), rgba(143,213,255,1), rgba(143,213,255,.0));
+  transform:scaleX(0); transform-origin:left;
+  transition:transform .25s ease;
+  border-radius:2px;
+}
+
+/* 状态：有内容 或 聚焦 → 标签上浮、高光条显现、呼吸光晕 */
+.floating:focus-within .fl-label,
+.floating input:not(:placeholder-shown) ~ .fl-label{
+  transform:translateY(-14px) scale(.88);
+  color:var(--accent);
+  background:rgba(255,255,255,.85);
+  padding:0 6px;
+  border-radius:6px;
+  box-shadow:0 2px 8px rgba(0,0,0,.05);
+}
+.floating:focus-within .focus-bar{ transform:scaleX(1); }
+
+@keyframes pulseGlow{
+  0%{ box-shadow: 0 0 0 0 rgba(143,213,255,.32), inset 0 0 0 1px rgba(35,165,255,.0); }
+  100%{ box-shadow: 0 0 0 12px rgba(143,213,255,0), inset 0 0 0 1px rgba(35,165,255,.0); }
+}
+.floating:focus-within input{
+  border-color:var(--field-border-focus);
+  background:var(--field-bg-focus);
+  box-shadow: 0 0 0 5px rgba(143,213,255,.22);
+  animation:pulseGlow 1.2s ease-out 1;
+}
+
+/* 兼容自动填充（Chrome） */
+input:-webkit-autofill{
+  -webkit-text-fill-color:var(--ink);
+  box-shadow: 0 0 0 1000px rgba(255,255,255,.90) inset !important;
+}
+input:-webkit-autofill ~ .fl-label{
+  transform:translateY(-14px) scale(.88);
+  color:var(--accent);
+  background:rgba(255,255,255,.85);
+  padding:0 6px; border-radius:6px;
+}
+
+/* 密码显示/隐藏按钮 */
+.pw-group .pw-wrap{ position:relative; }
+.pw-toggle{
+  position:absolute; right:10px; top:50%; transform:translateY(-50%);
+  border:none; background:transparent; padding:6px;
+  color:var(--ink-soft); cursor:pointer; line-height:1; border-radius:8px;
+}
+.pw-toggle:hover{ color:#213346; background:rgba(0,0,0,.04); }
+.pw-toggle:focus{ outline:none; box-shadow:0 0 0 3px rgba(143,213,255,.28); }
+
+/* 提交按钮 */
+.btn-primary{
+  appearance:none; width:100%;
+  padding:16px 20px; font-weight:800; letter-spacing:.3px; font-size:16px;
+  border-radius:var(--radius-xl);
+  border:1px solid rgba(143,213,255,.58);
+  color:#07131d;
+  background:linear-gradient(180deg, var(--primary) 0%, var(--primary-strong) 100%);
+  box-shadow:0 8px 28px rgba(60, 170, 250, .35);
+  cursor:pointer;
+  transition:transform .06s ease, box-shadow .2s ease, filter .2s ease;
+}
+.btn-primary:hover{ box-shadow:0 12px 34px rgba(60,170,250,.45); filter:brightness(1.03); }
+.btn-primary:active{ transform:translateY(1px) scale(.997); }
+
+.login-card__footer{
+  margin-top:12px; display:flex; align-items:center; gap:8px; justify-content:center;
+  color:var(--text-muted); font-size:12.5px;
+}
+.dot{ width:6px; height:6px; border-radius:50%;
+  background:radial-gradient(circle at 30% 30%, #9fe0ff, #56b7ff);
+  box-shadow:0 0 10px rgba(100,190,255,.8);
+}
+a,.muted{ color:var(--text-muted); text-decoration:none; }
+a:hover{ color:var(--text-normal); }
+
+.is-loading .btn-primary{ pointer-events:none; opacity:.85; }
+
+/* 小/大屏自适应 */
+@media (max-width:640px){
+  .login-panel{ width:100% !important; min-width:0; padding:18px; border-radius:18px; }
+  .login-card__header{ grid-template-columns:54px 1fr; }
+  .brand__logo{ width:54px; height:54px; }
+}
+@media (min-width:1680px){ .login-panel{ width:clamp(760px, 40vw, 1100px) !important; min-width:700px; } }
+@media (min-width:2160px){ .login-panel{ width:clamp(880px, 36vw, 1280px) !important; min-width:820px; } }

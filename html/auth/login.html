@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>登录 | ROS Dev Board</title>
+  <link rel="icon" href="../assets/images/logo.png" />
+
+  <!-- 可选：Bootstrap & Icons（图标用于眼睛按钮；没有也能运行） -->
+  <link rel="stylesheet" href="../libs/bootstrap/bootstrap.min.css" />
+  <link rel="stylesheet" href="../libs/bootstrap/bootstrap-icons.min.css" />
+
+  <!-- 可选：Toastr（存在则用，不存在自动降级 alert） -->
+  <link rel="stylesheet" href="../libs/toastr/toastr.min.css" />
+
+  <!-- 登录样式 -->
+  <link rel="stylesheet" href="./login.css?v=20251005-bright">
+  <!-- 若后端启用 CSRF，可放开并由后端填充值 -->
+  <!-- <meta name="csrf-token" content="YOUR_TOKEN_HERE"> -->
+</head>
+<body>
+  <!-- 背景 -->
+  <div class="bg">
+    <div class="bg__image" role="img" aria-label="ROS 背景"></div>
+    <div class="bg__vignette"></div>
+    <div class="bg__gradient"></div>
+  </div>
+
+  <main class="page">
+    <section class="login-panel">
+      <header class="login-card__header">
+        <img class="brand__logo" src="../assets/images/logo.png" alt="ROS Logo" />
+        <div class="brand__meta">
+          <h1 class="brand__title">ROS Dev Console</h1>
+          <p class="brand__subtitle">局域网 · 开发板登录</p>
+        </div>
+      </header>
+
+      <form id="loginForm" class="login-card__form" method="post" autocomplete="on" novalidate>
+        <!-- 用户名（浮动标签） -->
+        <div class="form-group floating">
+          <input id="username" name="username" type="text" placeholder=" " required />
+          <label for="username" class="fl-label">用户名</label>
+          <span class="focus-bar" aria-hidden="true"></span>
+        </div>
+
+        <!-- 密码（浮动标签 + 眼睛按钮） -->
+        <div class="form-group floating pw-group">
+          <div class="pw-wrap">
+            <input id="password" name="password" type="password" placeholder=" " required />
+            <button type="button" id="togglePwd" class="pw-toggle" aria-label="显示密码" title="显示/隐藏密码">
+              <i class="bi bi-eye"></i>
+            </button>
+            <label for="password" class="fl-label">密码</label>
+            <span class="focus-bar" aria-hidden="true"></span>
+          </div>
+        </div>
+
+        <button type="submit" class="btn-primary">登录</button>
+      </form>
+
+      <footer class="login-card__footer">
+        <span class="dot"></span>
+        <span class="muted">仅限授权用户访问 · 局域网设备</span>
+      </footer>
+    </section>
+  </main>
+
+  <!-- 可选：依赖 -->
+  <script src="../libs/jquery/jquery.min.js"></script>
+  <script src="../libs/bootstrap/bootstrap.bundle.min.js"></script>
+  <script src="../libs/toastr/toastr.min.js"></script>
+  <!-- 登录脚本 -->
+  <script src="./login.js?v=20251005-bright"></script>
+</body>
+</html>

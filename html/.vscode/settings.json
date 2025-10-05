@@ -1,0 +1,7 @@
+{
+  "fiveServer.root": "./",
+  "fiveServer.open": "/index.html",
+  "fiveServer.port": 5500,
+  "fiveServer.refresh": true
+}
+
