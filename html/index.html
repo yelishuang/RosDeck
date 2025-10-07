@@ -2,39 +2,234 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>我的第一个 Nginx 网站</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        }
-        .container {
-            text-align: center;
-            color: white;
-            background: rgba(255,255,255,0.1);
-            padding: 40px;
-            border-radius: 20px;
-            backdrop-filter: blur(10px);
-        }
-        h1 { font-size: 3em; margin: 0; }
-        p { font-size: 1.2em; margin-top: 20px; }
-    </style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RosDeck | ROS 开发板监控</title>
+    <link rel="icon" href="./assets/images/logo.png">
+    
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="./libs/bootstrap/bootstrap.min.css">
+    <link rel="stylesheet" href="./libs/bootstrap/bootstrap-icons.min.css">
+    
+    <!-- 主样式 -->
+    <link rel="stylesheet" href="./index.css">
 </head>
 <body>
-    <div class="container">
-        <h1>🎉 成功部署！</h1>
-        <p>这是您的第一个 Nginx 网站</p>
-        <p>当前时间：<span id="time"></span></p>
-    </div>
-    <script>
-        setInterval(() => {
-            document.getElementById('time').textContent = new Date().toLocaleString('zh-CN');
-        }, 1000);
-    </script>
+    <!-- 侧边栏 -->
+    <aside class="sidebar">
+        <!-- 用户信息 -->
+        <div class="user-info">
+            <div class="username">openeuler</div>
+            <span class="system-id btn-edit" data-editable="false">ye-CNP6S</span>
+        </div>
+        <hr class="divider">
+        
+        <!-- 系统分类 -->
+        <div class="category-block">
+            <div class="category-title">系统</div>
+            <ul class="submenu">
+                <li class="submenu-item active" onclick="loadContent('overview.html', this)">概览</li> 
+                <li class="submenu-item" onclick="loadIframe('logs-v2/logs-v2.html', this)">日志</li>
+                <li class="submenu-item" onclick="mountStorageV2(this)">存储管理</li>
+                <li class="submenu-item" onclick="loadContent('network-v2/network-v2.fragment.html', this)">网络</li>
+                <li class="submenu-item" onclick="loadContent('runtime-v2/runtime-v2.fragment.html', this)">运行中心</li>
+            </ul>
+        </div>
+        <hr class="divider">
+        
+        <!-- 工具分类 -->
+        <div class="category-block">
+            <div class="category-title">工具</div>
+            <ul class="submenu">
+                <li class="submenu-item" onclick="loadContent('terminal-v2/terminal-v2.fragment.html', this)">终端</li>
+                <li class="submenu-item" onclick="loadContent('file-transfer-v2/file-transfer-v2.fragment.html', this)">文件传输</li>
+            </ul>
+        </div>
+        <hr class="divider">
+        
+        <!-- ROS分类 -->
+        <div class="category-block">
+            <div class="category-title">ROS</div>
+            <ul class="submenu">
+                <li class="submenu-item" onclick="loadContent('ros-overview/ros-overview.fragment.html', this)">ROS 概览</li>
+                <li class="submenu-item" onclick="loadContent('ros-comm/ros-comm.fragment.html', this)">通信监控</li>
+                <li class="submenu-item" onclick="loadContent('ros-ops/ros-ops.fragment.html', this)">采集与配置</li>
+                <li class="submenu-item" onclick="loadContent('ros-ai-commander/ros-ai-commander.fragment.html', this)">ROS-AI</li>
+            </ul>
+        </div>
+
+        <!-- 重启按钮 -->
+        <div class="power-actions">
+            <div class="power-btn">
+                <div class="power-btn-main">
+                    重启
+                    <span class="dropdown-arrow">▲</span>
+                </div>
+                <div class="power-dropdown">
+                    <div class="power-option" data-action="restart">重启系统</div>
+                    <div class="power-option" data-action="shutdown">关闭系统</div>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- 主容器 -->
+    <main class="main-container">
+        <!-- 顶部状态栏 -->
+        <div class="status-ribbon">            
+            <div class="status-item uptime-item">
+                <i class="bi bi-clock-history"></i>
+                <span class="status-label">运行</span>
+                <span class="status-value" id="uptime-value">3天 2小时</span>
+            </div>
+            <div class="status-item">
+                <i class="bi bi-hdd"></i>
+                <span class="status-label">磁盘</span>
+                <span class="status-value">78%</span>
+            </div>
+            <div class="status-item">
+                <i class="bi bi-memory"></i>
+                <span class="status-label">内存</span>
+                <span class="status-value">62%</span>
+            </div>
+            <div class="status-item">
+                <i class="bi bi-cpu"></i>
+                <span class="status-label">CPU</span>
+                <span class="status-value">45%</span>
+            </div>
+            <div class="status-item">
+                <i class="bi bi-speedometer2"></i>
+                <span class="status-label">网络</span>
+                <span class="status-value">15 Mbps</span>
+            </div>
+        </div>
+
+        <!-- 主顶栏 -->
+        <header class="top-bar">
+            <div class="top-left">
+                <div class="breadcrumb-trail">
+                    <span class="trail-home">RosDeck</span>
+                    <i class="bi bi-chevron-right trail-sep"></i>
+                    <span class="trail-current">概览</span>
+                </div>
+            </div>
+            
+            <div class="top-center">
+                <div class="device-card">
+                    <div class="device-status">
+                        <div class="pulse-dot"></div>
+                        <span class="device-label">设备在线</span>
+                    </div>
+                    <div class="device-name">ye-CNP6S</div>
+                </div>
+            </div>
+            
+            <div class="top-right">
+                <button class="icon-btn notification-btn">
+                    <i class="bi bi-bell"></i>
+                    <span class="badge">3</span>
+                </button>
+                
+                <div class="user-card">
+                    <div class="user-avatar">
+                        <i class="bi bi-person-circle"></i>
+                    </div>
+                    <div class="user-details">
+                        <span class="user-name">openeuler</span>
+                        <span class="user-role">普通用户</span>
+                    </div>
+                </div>
+                
+                <button class="admin-mode-toggle">
+                    <span class="toggle-icon">
+                        <i class="bi bi-shield-lock"></i>
+                    </span>
+                    <span class="toggle-label">
+                        <span class="label-text">管理员</span>
+                        <span class="label-status">未激活</span>
+                    </span>
+                </button>
+            </div>
+        </header>
+
+        <!-- 内容区 -->
+        <div class="content-wrapper">
+            <div class="content-area">
+                <!-- 欢迎卡片 -->
+                <div class="welcome-card">
+                    <div class="welcome-icon">
+                        <i class="bi bi-robot"></i>
+                    </div>
+                    <h1 class="welcome-title">欢迎使用 RosDeck</h1>
+                    <p class="welcome-subtitle">ROS 2 开发板实时监控与管理平台</p>
+                    <div class="welcome-stats">
+                        <div class="stat-box">
+                            <div class="stat-value">8</div>
+                            <div class="stat-label">活跃节点</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-value">24</div>
+                            <div class="stat-label">话题数量</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-value">12</div>
+                            <div class="stat-label">服务数量</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-value">99.8%</div>
+                            <div class="stat-label">系统稳定性</div>
+                        </div>
+                    </div>
+                    <button class="quick-start-btn">
+                        <span>开始监控</span>
+                        <i class="bi bi-arrow-right"></i>
+                    </button>
+                </div>
+
+                <!-- 快速操作卡片组 -->
+                <div class="quick-actions">
+                    <div class="action-card">
+                        <div class="action-icon blue">
+                            <i class="bi bi-diagram-3"></i>
+                        </div>
+                        <h3 class="action-title">ROS 节点</h3>
+                        <p class="action-desc">查看和管理运行中的 ROS 节点</p>
+                        <a href="#" class="action-link">查看详情 →</a>
+                    </div>
+
+                    <div class="action-card">
+                        <div class="action-icon green">
+                            <i class="bi bi-terminal"></i>
+                        </div>
+                        <h3 class="action-title">远程终端</h3>
+                        <p class="action-desc">通过 Web 访问系统命令行</p>
+                        <a href="#" class="action-link">打开终端 →</a>
+                    </div>
+
+                    <div class="action-card">
+                        <div class="action-icon purple">
+                            <i class="bi bi-file-earmark-text"></i>
+                        </div>
+                        <h3 class="action-title">系统日志</h3>
+                        <p class="action-desc">实时查看系统和应用日志</p>
+                        <a href="#" class="action-link">查看日志 →</a>
+                    </div>
+
+                    <div class="action-card">
+                        <div class="action-icon orange">
+                            <i class="bi bi-folder2-open"></i>
+                        </div>
+                        <h3 class="action-title">文件传输</h3>
+                        <p class="action-desc">上传和下载文件到开发板</p>
+                        <a href="#" class="action-link">管理文件 →</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- 脚本 -->
+    <script src="./libs/jquery/jquery.min.js"></script>
+    <script src="./libs/bootstrap/bootstrap.bundle.min.js"></script>
+    <script src="./script.js"></script>
 </body>
 </html>
