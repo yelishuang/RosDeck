@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# scripts/deploy_and_start.sh
+# scripts/run_dev.sh
 # 作用：将前端同步到 Nginx 根目录（按你既有方案），安装/校验/启动 Nginx（1221 端口）；
 #      准备并后台启动后端（4162 端口），写入独立日志与 PID。
 set -euo pipefail
@@ -39,6 +39,22 @@ if ! command -v systemctl >/dev/null 2>&1; then log_w "未检测到 systemd，�
 
 log_i "项目根目录：$PROJECT_ROOT"
 
+# ===== 配置 sudoers（电源管理权限）=====
+CURRENT_USER="$(whoami)"
+log_i "配置 sudoers 权限（用户: $CURRENT_USER）"
+
+# 检查是否已配置
+if sudo grep -q "^$CURRENT_USER.*NOPASSWD.*systemctl reboot" /etc/sudoers.d/* 2>/dev/null || \
+   sudo grep -q "^$CURRENT_USER.*NOPASSWD.*systemctl reboot" /etc/sudoers 2>/dev/null; then
+  log_i "sudoers 权限已配置"
+else
+  log_i "添加 sudoers 配置"
+  echo "$CURRENT_USER ALL=(ALL) NOPASSWD: /usr/bin/systemctl reboot" | sudo tee /etc/sudoers.d/rosdeck >/dev/null
+  echo "$CURRENT_USER ALL=(ALL) NOPASSWD: /usr/bin/systemctl poweroff" | sudo tee -a /etc/sudoers.d/rosdeck >/dev/null
+  sudo chmod 0440 /etc/sudoers.d/rosdeck
+  log_i "sudoers 配置完成"
+fi
+
 # ===== 同步前端到 Nginx 路径（不改变你的既有逻辑）=====
 log_i "同步前端到 ${NGINX_ROOT}"
 sudo mkdir -p "$NGINX_ROOT"
@@ -75,6 +91,13 @@ if [[ ! -d "$VENV_DIR" ]]; then
   log_i "创建后端虚拟环境：$VENV_DIR"
   python3 -m venv "$VENV_DIR"
 fi
+
+# 确保 Python 包结构完整
+log_i "初始化 Python 包结构"
+touch "$BACKEND_DIR/app/services/__init__.py"
+touch "$BACKEND_DIR/app/models/__init__.py"
+touch "$BACKEND_DIR/app/ws/__init__.py"
+
 # shellcheck disable=SC1091
 source "$VENV_DIR/bin/activate"
 log_i "安装后端依赖（静默）"
@@ -118,7 +141,21 @@ echo "$NEW_PID" | sudo tee "$PIDFILE" >/dev/null
 log_i "后端已启动 (PID=$NEW_PID)"
 
 # ===== 健康检查（简短，不通过仅提示）=====
-sleep 0.6
+sleep 2  # ✅ 延长等待时间
+MAX_RETRY=5
+RETRY_COUNT=0
+
+while [ $RETRY_COUNT -lt $MAX_RETRY ]; do
+  if curl -fsS "http://${BACKEND_HOST}:${BACKEND_PORT}/api/health" >/dev/null 2>&1; then
+    log_i "后端健康检查通过"
+    break
+  fi
+  RETRY_COUNT=$((RETRY_COUNT + 1))
+  if [ $RETRY_COUNT -lt $MAX_RETRY ]; then
+    sleep 1
+  fi
+done
+
 if curl -fsS "http://${BACKEND_HOST}:${BACKEND_PORT}/api/health" >/dev/null 2>&1; then
   log_i "后端健康检查通过"
 else

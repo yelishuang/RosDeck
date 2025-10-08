@@ -6,7 +6,14 @@ from fastapi.responses import HTMLResponse, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pathlib import Path
 import logging
+
+# 导入路由
 from app.routes import auth
+from app.routes import system
+from app.routes import ros
+from app.routes import device
+
+# 导入依赖
 from app.deps.csrf import csrf_protection
 
 
@@ -41,6 +48,9 @@ async def log_requests(request: Request, call_next):
 
 # 注册路由
 app.include_router(auth.router)
+app.include_router(system.router)
+app.include_router(ros.router)
+app.include_router(device.router)
 
 # 埋点接口
 @app.post("/api/metrics")
@@ -49,7 +59,7 @@ async def collect_metrics(request: Request):
         data = await request.json()
         event = data.get('event')
         
-        # 只记录关键操作，不记录页面浏览
+        # 只记录关键操作,不记录页面浏览
         if event in ['login_success', 'login_failed', 'file_uploaded', 'command_executed']:
             logger.warning(f"AUDIT: {event} from {request.client.host} - {data}")
         
@@ -67,19 +77,11 @@ async def health_check():
 async def root():
     return {"message": "RosDeck Backend API", "version": "0.1.0"}
 
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(
-        "app.main:app",
-        host="127.0.0.1",  # 只监听本地，外部通过 Nginx 访问
-        port=4162,         # 使用 4162 端口
-        reload=True
-    )
-
+# 登录页面
 @app.get("/auth/login.html", response_class=HTMLResponse)
 async def serve_login_page():
     """
-    返回登录页面，注入 CSRF Token
+    返回登录页面,注入 CSRF Token
     """
     # 读取 Nginx 部署的静态文件
     login_html_path = Path("/usr/share/nginx/html/rosdeck/auth/login.html")
@@ -98,3 +100,12 @@ async def serve_login_page():
     )
     
     return HTMLResponse(content=html_content)
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(
+        "app.main:app",
+        host="127.0.0.1",  # 只监听本地,外部通过 Nginx 访问
+        port=4162,         # 使用 4162 端口
+        reload=True
+    )

@@ -12,9 +12,12 @@
     
     <!-- 主样式 -->
     <link rel="stylesheet" href="./index.css">
+
+    <!-- 公共样式 -->
+    <link rel="stylesheet" href="./shared/css/common.css">
 </head>
 <body>
-    <!-- 侧边栏 -->
+    <!-- 侧边栏 - 替换原 index.html 中的 <aside class="sidebar"> 部分 -->
     <aside class="sidebar">
         <!-- 用户信息 -->
         <div class="user-info">
@@ -27,11 +30,11 @@
         <div class="category-block">
             <div class="category-title">系统</div>
             <ul class="submenu">
-                <li class="submenu-item active" onclick="loadContent('overview.html', this)">概览</li> 
-                <li class="submenu-item" onclick="loadIframe('logs-v2/logs-v2.html', this)">日志</li>
-                <li class="submenu-item" onclick="mountStorageV2(this)">存储管理</li>
-                <li class="submenu-item" onclick="loadContent('network-v2/network-v2.fragment.html', this)">网络</li>
-                <li class="submenu-item" onclick="loadContent('runtime-v2/runtime-v2.fragment.html', this)">运行中心</li>
+                <li class="submenu-item active" data-module="overview">概览</li> 
+                <li class="submenu-item" data-module="logs">日志</li>
+                <li class="submenu-item" data-module="storage">存储管理</li>
+                <li class="submenu-item" data-module="network">网络</li>
+                <li class="submenu-item" data-module="runtime">运行中心</li>
             </ul>
         </div>
         <hr class="divider">
@@ -40,8 +43,8 @@
         <div class="category-block">
             <div class="category-title">工具</div>
             <ul class="submenu">
-                <li class="submenu-item" onclick="loadContent('terminal-v2/terminal-v2.fragment.html', this)">终端</li>
-                <li class="submenu-item" onclick="loadContent('file-transfer-v2/file-transfer-v2.fragment.html', this)">文件传输</li>
+                <li class="submenu-item" data-module="terminal">终端</li>
+                <li class="submenu-item" data-module="file-transfer">文件传输</li>
             </ul>
         </div>
         <hr class="divider">
@@ -50,10 +53,10 @@
         <div class="category-block">
             <div class="category-title">ROS</div>
             <ul class="submenu">
-                <li class="submenu-item" onclick="loadContent('ros-overview/ros-overview.fragment.html', this)">ROS 概览</li>
-                <li class="submenu-item" onclick="loadContent('ros-comm/ros-comm.fragment.html', this)">通信监控</li>
-                <li class="submenu-item" onclick="loadContent('ros-ops/ros-ops.fragment.html', this)">采集与配置</li>
-                <li class="submenu-item" onclick="loadContent('ros-ai-commander/ros-ai-commander.fragment.html', this)">ROS-AI</li>
+                <li class="submenu-item" data-module="ros/overview">ROS 概览</li>
+                <li class="submenu-item" data-module="ros/communication">通信监控</li>
+                <li class="submenu-item" data-module="ros/operations">采集与配置</li>
+                <li class="submenu-item" data-module="ros/ai-commander">ROS-AI</li>
             </ul>
         </div>
 
@@ -72,6 +75,7 @@
         </div>
     </aside>
 
+
     <!-- 主容器 -->
     <main class="main-container">
         <!-- 顶部状态栏 -->
@@ -84,22 +88,22 @@
             <div class="status-item">
                 <i class="bi bi-hdd"></i>
                 <span class="status-label">磁盘</span>
-                <span class="status-value">78%</span>
+                <span class="status-value" id="disk-value">78%</span>
             </div>
             <div class="status-item">
                 <i class="bi bi-memory"></i>
                 <span class="status-label">内存</span>
-                <span class="status-value">62%</span>
+                <span class="status-value" id="memory-value">62%</span>
             </div>
             <div class="status-item">
                 <i class="bi bi-cpu"></i>
                 <span class="status-label">CPU</span>
-                <span class="status-value">45%</span>
+                <span class="status-value" id="cpu-value">45%</span>
             </div>
             <div class="status-item">
                 <i class="bi bi-speedometer2"></i>
                 <span class="status-label">网络</span>
-                <span class="status-value">15 Mbps</span>
+                <span class="status-value" id="network-value">15 Mbps</span>
             </div>
         </div>
 
@@ -154,75 +158,8 @@
         <!-- 内容区 -->
         <div class="content-wrapper">
             <div class="content-area">
-                <!-- 欢迎卡片 -->
-                <div class="welcome-card">
-                    <div class="welcome-icon">
-                        <i class="bi bi-robot"></i>
-                    </div>
-                    <h1 class="welcome-title">欢迎使用 RosDeck</h1>
-                    <p class="welcome-subtitle">ROS 2 开发板实时监控与管理平台</p>
-                    <div class="welcome-stats">
-                        <div class="stat-box">
-                            <div class="stat-value">8</div>
-                            <div class="stat-label">活跃节点</div>
-                        </div>
-                        <div class="stat-box">
-                            <div class="stat-value">24</div>
-                            <div class="stat-label">话题数量</div>
-                        </div>
-                        <div class="stat-box">
-                            <div class="stat-value">12</div>
-                            <div class="stat-label">服务数量</div>
-                        </div>
-                        <div class="stat-box">
-                            <div class="stat-value">99.8%</div>
-                            <div class="stat-label">系统稳定性</div>
-                        </div>
-                    </div>
-                    <button class="quick-start-btn">
-                        <span>开始监控</span>
-                        <i class="bi bi-arrow-right"></i>
-                    </button>
-                </div>
-
-                <!-- 快速操作卡片组 -->
-                <div class="quick-actions">
-                    <div class="action-card">
-                        <div class="action-icon blue">
-                            <i class="bi bi-diagram-3"></i>
-                        </div>
-                        <h3 class="action-title">ROS 节点</h3>
-                        <p class="action-desc">查看和管理运行中的 ROS 节点</p>
-                        <a href="#" class="action-link">查看详情 →</a>
-                    </div>
-
-                    <div class="action-card">
-                        <div class="action-icon green">
-                            <i class="bi bi-terminal"></i>
-                        </div>
-                        <h3 class="action-title">远程终端</h3>
-                        <p class="action-desc">通过 Web 访问系统命令行</p>
-                        <a href="#" class="action-link">打开终端 →</a>
-                    </div>
-
-                    <div class="action-card">
-                        <div class="action-icon purple">
-                            <i class="bi bi-file-earmark-text"></i>
-                        </div>
-                        <h3 class="action-title">系统日志</h3>
-                        <p class="action-desc">实时查看系统和应用日志</p>
-                        <a href="#" class="action-link">查看日志 →</a>
-                    </div>
-
-                    <div class="action-card">
-                        <div class="action-icon orange">
-                            <i class="bi bi-folder2-open"></i>
-                        </div>
-                        <h3 class="action-title">文件传输</h3>
-                        <p class="action-desc">上传和下载文件到开发板</p>
-                        <a href="#" class="action-link">管理文件 →</a>
-                    </div>
-                </div>
+                <!-- 动态加载的模块内容将显示在这里 -->
+                <!-- 默认会加载 modules/overview/index.html -->
             </div>
         </div>
     </main>
@@ -230,6 +167,6 @@
     <!-- 脚本 -->
     <script src="./libs/jquery/jquery.min.js"></script>
     <script src="./libs/bootstrap/bootstrap.bundle.min.js"></script>
-    <script src="./script.js"></script>
+    <script src="./index.js"></script>
 </body>
 </html>

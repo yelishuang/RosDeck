@@ -244,8 +244,18 @@ body {
     box-shadow: var(--shadow-lg);
 }
 
-.power-btn:hover .power-dropdown {
-    display: block;
+.power-dropdown {
+    display: none; 
+    position: absolute;
+    bottom: 100%;
+    left: 0;
+    right: 0;
+    margin-bottom: 8px;
+    background: #1e293b;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    box-shadow: var(--shadow-lg);
 }
 
 .power-option {

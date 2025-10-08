@@ -1,0 +1,18 @@
+INFO:     Started server process [1686]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:4162 (Press CTRL+C to quit)
+2025-10-08 14:24:05,659 - app.main - INFO - GET /auth/login.html
+2025-10-08 14:24:05,667 - app.main - INFO - Response status: 200
+INFO:     10.0.2.2:0 - "GET /auth/login.html HTTP/1.1" 200 OK
+2025-10-08 14:24:05,787 - app.main - INFO - POST /api/metrics
+2025-10-08 14:24:05,794 - app.main - INFO - Response status: 200
+INFO:     10.0.2.2:0 - "POST /api/metrics HTTP/1.1" 200 OK
+2025-10-08 14:24:10,284 - app.main - INFO - POST /api/auth/login
+2025-10-08 14:24:10,783 - app.routes.auth - INFO - User openeuler logged in successfully
+2025-10-08 14:24:10,803 - app.main - INFO - Response status: 200
+INFO:     10.0.2.2:0 - "POST /api/auth/login HTTP/1.1" 200 OK
+2025-10-08 14:24:10,827 - app.main - INFO - POST /api/metrics
+2025-10-08 14:24:10,834 - app.main - WARNING - AUDIT: login_success from 10.0.2.2 - {'event': 'login_success', 'ts': 1759904650749, 'ua': 'Mozilla/5.0 (X11; Linux x86_64; rv:143.0) Gecko/20100101 Firefox/143.0'}
+2025-10-08 14:24:10,836 - app.main - INFO - Response status: 200
+INFO:     10.0.2.2:0 - "POST /api/metrics HTTP/1.1" 200 OK

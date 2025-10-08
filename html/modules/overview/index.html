@@ -1,0 +1,72 @@
+<!-- 概览页面内容 -->
+<div class="overview-container">
+    <!-- 欢迎卡片 -->
+    <div class="welcome-card">
+        <div class="welcome-icon">
+            <i class="bi bi-robot"></i>
+        </div>
+        <h1 class="welcome-title">欢迎使用 RosDeck</h1>
+        <p class="welcome-subtitle">ROS 2 开发板实时监控与管理平台</p>
+        <div class="welcome-stats">
+        <div class="stat-box">
+            <div id="stat-active-nodes" class="stat-value">8</div>
+            <div class="stat-label">活跃节点</div>
+        </div>
+        <div class="stat-box">
+            <div id="stat-topics-count" class="stat-value">24</div>
+            <div class="stat-label">话题数量</div>
+        </div>
+        <div class="stat-box">
+            <div id="stat-services-count" class="stat-value">12</div>
+            <div class="stat-label">服务数量</div>
+        </div>
+        <div class="stat-box">
+            <div id="stat-stability" class="stat-value">99.8%</div>
+            <div class="stat-label">系统稳定性</div>
+        </div>
+        </div>
+        <button class="quick-start-btn">
+            <span>开始监控</span>
+            <i class="bi bi-arrow-right"></i>
+        </button>
+    </div>
+
+    <!-- 快速操作卡片组 -->
+    <div class="quick-actions">
+        <div class="action-card" data-target="ros/overview">
+            <div class="action-icon blue">
+                <i class="bi bi-diagram-3"></i>
+            </div>
+            <h3 class="action-title">ROS 节点</h3>
+            <p class="action-desc">查看和管理运行中的 ROS 节点</p>
+            <a href="#" class="action-link">查看详情 →</a>
+        </div>
+
+        <div class="action-card" data-target="terminal">
+            <div class="action-icon green">
+                <i class="bi bi-terminal"></i>
+            </div>
+            <h3 class="action-title">远程终端</h3>
+            <p class="action-desc">通过 Web 访问系统命令行</p>
+            <a href="#" class="action-link">打开终端 →</a>
+        </div>
+
+        <div class="action-card" data-target="logs">
+            <div class="action-icon purple">
+                <i class="bi bi-file-earmark-text"></i>
+            </div>
+            <h3 class="action-title">系统日志</h3>
+            <p class="action-desc">实时查看系统和应用日志</p>
+            <a href="#" class="action-link">查看日志 →</a>
+        </div>
+
+        <div class="action-card" data-target="file-transfer">
+            <div class="action-icon orange">
+                <i class="bi bi-folder2-open"></i>
+            </div>
+            <h3 class="action-title">文件传输</h3>
+            <p class="action-desc">上传和下载文件到开发板</p>
+            <a href="#" class="action-link">管理文件 →</a>
+        </div>
+    </div>
+</div>
