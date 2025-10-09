@@ -190,3 +190,21 @@ async def verify_admin(body: AdminVerifyRequest, response: Response):
         message="验证成功",
         session_expires_in=session_expires_in
     )
+
+
+@router.post(
+    "/admin-logout",
+    dependencies=[
+        Depends(csrf_protection.validate_token)
+    ]
+)
+async def admin_logout(request: Request, response: Response):
+    """
+    退出管理员模式，撤销 session 并清理 Cookie
+    """
+    admin_session_id = request.cookies.get("admin_session_id")
+    if admin_session_id:
+        admin_auth.revoke_session(admin_session_id)
+    response.delete_cookie(key="admin_session_id", path="/")
+    logger.info("Admin session revoked via /admin-logout")
+    return {"success": True, "message": "管理员模式已退出"}

@@ -13,6 +13,7 @@ let powerActionPending = false;
 
 const DEVICE_INFO_REFRESH_MS = 60000;
 const API_VERIFY_ADMIN = '/api/auth/verify-admin';
+const API_ADMIN_LOGOUT = '/api/auth/admin-logout';
 const STORAGE_KEYS = {
     csrf: 'rosdeck_csrf_token'
 };
@@ -406,7 +407,9 @@ function toggleAdminMode() {
         promptAdminPassword();
     } else {
         // 退出管理员模式
-        deactivateAdminMode();
+        deactivateAdminMode().catch(err => {
+            console.error('退出管理员模式失败:', err);
+        });
     }
 }
 
@@ -477,22 +480,65 @@ function activateAdminMode() {
     }
     toastr.success('管理员模式已激活', '成功');
     console.log('管理员模式激活');
+
+    window.dispatchEvent(new CustomEvent('rosdeck:admin-mode-change', {
+        detail: { active: true }
+    }));
 }
 
-function deactivateAdminMode() {
-    adminModeActive = false;
-    
-    // 更新UI
-    $('.admin-mode-toggle').removeClass('active');
-    $('.label-text').text('管理员');
-    $('.label-status').text('未激活');
-    $('.user-role').text('普通用户');
-    
-    if (typeof toastr !== 'undefined') {
-        toastr.clear();
+async function deactivateAdminMode() {
+    if (adminModePending) {
+        return;
     }
-    toastr.info('管理员模式已退出', '提示');
-    console.log('管理员模式退出');
+    const csrfToken = await ensureCsrfToken();
+    if (!csrfToken) {
+        if (typeof toastr !== 'undefined') {
+            toastr.error('无法获取 CSRF Token，请稍后重试', '错误');
+        }
+        return;
+    }
+
+    adminModePending = true;
+    try {
+        if (typeof toastr !== 'undefined') {
+            toastr.clear();
+            toastr.info('正在退出管理员模式...', '处理中');
+        }
+        const { response, data } = await postJson(API_ADMIN_LOGOUT, {}, {
+            headers: { 'X-CSRF-Token': csrfToken }
+        });
+        if (!response.ok || data?.success !== true) {
+            const message = data?.message || `退出失败 (HTTP ${response.status})`;
+            if (typeof toastr !== 'undefined') {
+                toastr.error(message, '错误');
+            }
+            return;
+        }
+
+        adminModeActive = false;
+        
+        // 更新UI
+        $('.admin-mode-toggle').removeClass('active');
+        $('.label-text').text('管理员');
+        $('.label-status').text('未激活');
+        $('.user-role').text('普通用户');
+        
+        if (typeof toastr !== 'undefined') {
+            toastr.clear();
+        }
+        toastr.info('管理员模式已退出', '提示');
+        console.log('管理员模式退出');
+        window.dispatchEvent(new CustomEvent('rosdeck:admin-mode-change', {
+            detail: { active: false }
+        }));
+    } catch (error) {
+        if (typeof toastr !== 'undefined') {
+            toastr.error('退出管理员模式时出现异常，请稍后重试', '错误');
+        }
+        throw error;
+    } finally {
+        adminModePending = false;
+    }
 }
 
 // ==================== 电源操作 ====================

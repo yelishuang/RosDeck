@@ -1,8 +1,67 @@
-<div class="module-placeholder">
-    <div class="placeholder-icon">
-        <i class="bi bi-folder2-open"></i>
+<div class="file-transfer-module">
+    <div class="file-toolbar">
+        <div class="toolbar-path">
+            <div class="path-title">
+                <span class="path-label">当前位置</span>
+                <span class="path-location" id="file-location">加载中...</span>
+            </div>
+            <div class="path-breadcrumbs" id="file-breadcrumbs"></div>
+        </div>
+        <div class="toolbar-actions">
+            <button class="btn-outline" id="file-go-up-btn" disabled>
+                <i class="bi bi-arrow-up-circle"></i> 上一级
+            </button>
+            <button class="btn-outline" id="file-refresh-btn">
+                <i class="bi bi-arrow-repeat"></i> 刷新
+            </button>
+            <button class="btn-primary" id="file-upload-btn">
+                <i class="bi bi-upload"></i> 上传文件
+            </button>
+            <input type="file" id="file-upload-input" multiple style="display:none">
+        </div>
     </div>
-    <h2 class="placeholder-title">文件传输</h2>
-    <p class="placeholder-desc">文件上传下载管理</p>
-    <div class="placeholder-status">开发中...</div>
+
+    <div class="file-summary">
+        <span class="summary-item">
+            <i class="bi bi-person-circle"></i>
+            <span id="file-mode-indicator">普通模式</span>
+        </span>
+        <span class="summary-item">
+            <i class="bi bi-hdd"></i>
+            <span>根目录: <code id="file-root-indicator">--</code></span>
+        </span>
+    </div>
+
+    <div class="file-warning" id="file-warning-banner" style="display:none;">
+        <i class="bi bi-exclamation-triangle"></i>
+        <span id="file-warning-text">该目录包含系统关键文件，操作前请确认风险。</span>
+    </div>
+
+    <div class="file-table-wrapper">
+        <table class="file-table">
+            <thead>
+                <tr>
+                    <th class="col-name">名称</th>
+                    <th class="col-size">大小</th>
+                    <th class="col-modified">修改时间</th>
+                    <th class="col-actions">操作</th>
+                </tr>
+            </thead>
+            <tbody id="file-table-body">
+                <tr class="file-loading-row">
+                    <td colspan="4">
+                        <div class="loading-holder">
+                            <i class="bi bi-arrow-clockwise spinner"></i>
+                            正在加载...
+                        </div>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+        <div class="file-empty" id="file-empty" style="display:none;">
+            <i class="bi bi-inbox"></i>
+            <p>目录为空</p>
+            <p class="hint">可以点击“上传文件”将文件发送到当前目录</p>
+        </div>
+    </div>
 </div>
