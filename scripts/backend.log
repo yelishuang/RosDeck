@@ -1,18 +1,116 @@
-INFO:     Started server process [1686]
+Traceback (most recent call last):
+  File "/home/openeuler/shared/RosDeck/backend/.venv/bin/uvicorn", line 7, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/home/openeuler/shared/RosDeck/backend/.venv/lib64/python3.11/site-packages/click/core.py", line 1462, in __call__
+    return self.main(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/openeuler/shared/RosDeck/backend/.venv/lib64/python3.11/site-packages/click/core.py", line 1383, in main
+    rv = self.invoke(ctx)
+         ^^^^^^^^^^^^^^^^
+  File "/home/openeuler/shared/RosDeck/backend/.venv/lib64/python3.11/site-packages/click/core.py", line 1246, in invoke
+    return ctx.invoke(self.callback, **ctx.params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/openeuler/shared/RosDeck/backend/.venv/lib64/python3.11/site-packages/click/core.py", line 814, in invoke
+    return callback(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/openeuler/shared/RosDeck/backend/.venv/lib64/python3.11/site-packages/uvicorn/main.py", line 416, in main
+    run(
+  File "/home/openeuler/shared/RosDeck/backend/.venv/lib64/python3.11/site-packages/uvicorn/main.py", line 587, in run
+    server.run()
+  File "/home/openeuler/shared/RosDeck/backend/.venv/lib64/python3.11/site-packages/uvicorn/server.py", line 61, in run
+    return asyncio.run(self.serve(sockets=sockets))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib64/python3.11/asyncio/runners.py", line 190, in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+  File "/usr/lib64/python3.11/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib64/python3.11/asyncio/base_events.py", line 653, in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "/home/openeuler/shared/RosDeck/backend/.venv/lib64/python3.11/site-packages/uvicorn/server.py", line 68, in serve
+    config.load()
+  File "/home/openeuler/shared/RosDeck/backend/.venv/lib64/python3.11/site-packages/uvicorn/config.py", line 467, in load
+    self.loaded_app = import_from_string(self.app)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/openeuler/shared/RosDeck/backend/.venv/lib64/python3.11/site-packages/uvicorn/importer.py", line 24, in import_from_string
+    raise exc from None
+  File "/home/openeuler/shared/RosDeck/backend/.venv/lib64/python3.11/site-packages/uvicorn/importer.py", line 21, in import_from_string
+    module = importlib.import_module(module_str)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib64/python3.11/importlib/__init__.py", line 126, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1204, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1176, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1147, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 690, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 940, in exec_module
+  File "<frozen importlib._bootstrap>", line 241, in _call_with_frames_removed
+  File "/home/openeuler/shared/RosDeck/backend/app/main.py", line 11, in <module>
+    from app.routes import auth
+  File "/home/openeuler/shared/RosDeck/backend/app/routes/auth.py", line 7, in <module>
+    import pam
+  File "/home/openeuler/shared/RosDeck/backend/.venv/lib64/python3.11/site-packages/pam/__init__.py", line 9, in <module>
+    from .__internals import PAM_ACCT_EXPIRED
+  File "/home/openeuler/shared/RosDeck/backend/.venv/lib64/python3.11/site-packages/pam/__internals.py", line 2, in <module>
+    import six
+ModuleNotFoundError: No module named 'six'
+INFO:     Started server process [1957]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
 INFO:     Uvicorn running on http://127.0.0.1:4162 (Press CTRL+C to quit)
-2025-10-08 14:24:05,659 - app.main - INFO - GET /auth/login.html
-2025-10-08 14:24:05,667 - app.main - INFO - Response status: 200
+2025-10-09 14:52:34,222 - app.main - INFO - GET /auth/login.html
+2025-10-09 14:52:34,228 - app.main - INFO - Response status: 200
 INFO:     10.0.2.2:0 - "GET /auth/login.html HTTP/1.1" 200 OK
-2025-10-08 14:24:05,787 - app.main - INFO - POST /api/metrics
-2025-10-08 14:24:05,794 - app.main - INFO - Response status: 200
+2025-10-09 14:52:34,287 - app.main - INFO - POST /api/metrics
+2025-10-09 14:52:34,293 - app.main - INFO - Response status: 200
 INFO:     10.0.2.2:0 - "POST /api/metrics HTTP/1.1" 200 OK
-2025-10-08 14:24:10,284 - app.main - INFO - POST /api/auth/login
-2025-10-08 14:24:10,783 - app.routes.auth - INFO - User openeuler logged in successfully
-2025-10-08 14:24:10,803 - app.main - INFO - Response status: 200
+2025-10-09 14:52:41,020 - app.main - INFO - POST /api/auth/login
+2025-10-09 14:52:41,622 - app.routes.auth - INFO - User openeuler logged in successfully
+2025-10-09 14:52:41,641 - app.main - INFO - Response status: 200
 INFO:     10.0.2.2:0 - "POST /api/auth/login HTTP/1.1" 200 OK
-2025-10-08 14:24:10,827 - app.main - INFO - POST /api/metrics
-2025-10-08 14:24:10,834 - app.main - WARNING - AUDIT: login_success from 10.0.2.2 - {'event': 'login_success', 'ts': 1759904650749, 'ua': 'Mozilla/5.0 (X11; Linux x86_64; rv:143.0) Gecko/20100101 Firefox/143.0'}
-2025-10-08 14:24:10,836 - app.main - INFO - Response status: 200
+2025-10-09 14:52:41,663 - app.main - INFO - POST /api/metrics
+2025-10-09 14:52:41,670 - app.main - WARNING - AUDIT: login_success from 10.0.2.2 - {'event': 'login_success', 'ts': 1759992761674, 'ua': 'Mozilla/5.0 (X11; Linux x86_64; rv:143.0) Gecko/20100101 Firefox/143.0'}
+2025-10-09 14:52:41,672 - app.main - INFO - Response status: 200
 INFO:     10.0.2.2:0 - "POST /api/metrics HTTP/1.1" 200 OK
+2025-10-09 14:52:41,994 - app.main - INFO - GET /api/device/info
+2025-10-09 14:52:41,995 - app.main - INFO - GET /api/system/status
+2025-10-09 14:52:42,121 - app.main - INFO - Response status: 200
+2025-10-09 14:52:42,123 - app.main - INFO - Response status: 200
+INFO:     10.0.2.2:0 - "GET /api/device/info HTTP/1.1" 200 OK
+INFO:     10.0.2.2:0 - "GET /api/system/status HTTP/1.1" 200 OK
+2025-10-09 14:52:42,131 - app.main - INFO - GET /api/ros/stats
+2025-10-09 14:52:42,138 - app.main - INFO - Response status: 200
+INFO:     10.0.2.2:0 - "GET /api/ros/stats HTTP/1.1" 200 OK
+2025-10-09 14:52:46,981 - app.main - INFO - GET /api/system/status
+2025-10-09 14:52:47,097 - app.main - INFO - GET /api/ros/stats
+2025-10-09 14:52:47,099 - app.main - INFO - Response status: 200
+INFO:     10.0.2.2:0 - "GET /api/system/status HTTP/1.1" 200 OK
+2025-10-09 14:52:47,106 - app.main - INFO - Response status: 200
+INFO:     10.0.2.2:0 - "GET /api/ros/stats HTTP/1.1" 200 OK
+2025-10-09 14:52:53,091 - app.main - INFO - POST /api/auth/verify-admin
+2025-10-09 14:52:53,092 - app.main - INFO - GET /api/system/status
+2025-10-09 14:52:53,093 - app.main - INFO - GET /api/ros/stats
+2025-10-09 14:52:53,209 - app.main - INFO - Response status: 200
+2025-10-09 14:52:53,210 - app.main - INFO - Response status: 200
+2025-10-09 14:52:53,559 - app.deps.admin_auth - INFO - 创建管理员 session: admin_root_1759992773, 有效期: 1800秒
+2025-10-09 14:52:53,560 - app.routes.auth - INFO - Admin verification successful, session created: admin_root_1759992773
+INFO:     10.0.2.2:0 - "GET /api/system/status HTTP/1.1" 200 OK
+INFO:     10.0.2.2:0 - "GET /api/ros/stats HTTP/1.1" 200 OK
+2025-10-09 14:52:53,567 - app.main - INFO - Response status: 200
+INFO:     10.0.2.2:0 - "POST /api/auth/verify-admin HTTP/1.1" 200 OK
+2025-10-09 14:52:53,577 - app.main - INFO - POST /api/system/power
+2025-10-09 14:52:53,582 - app.routes.system - WARNING - 执行电源操作: restart
+2025-10-09 14:52:53,738 - app.main - INFO - Response status: 200
+INFO:     10.0.2.2:0 - "POST /api/system/power HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [1957]
+INFO:     Started server process [1402]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:4162 (Press CTRL+C to quit)

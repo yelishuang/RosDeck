@@ -72,6 +72,13 @@ async def collect_metrics(request: Request):
 async def health_check():
     return {"status": "ok", "csrf_enabled": True}
 
+@app.get("/api/csrf-token")
+async def issue_csrf_token():
+    token = csrf_protection.get_token()
+    if not token:
+        token = csrf_protection.generate_token()
+    return {"token": token}
+
 # 根路径
 @app.get("/")
 async def root():

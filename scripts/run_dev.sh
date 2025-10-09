@@ -35,24 +35,66 @@ need_cmd python3
 need_cmd curl
 need_cmd sed
 need_cmd awk
+need_cmd cc
 if ! command -v systemctl >/dev/null 2>&1; then log_w "未检测到 systemd，需手动管理 Nginx 与后台进程"; fi
 
 log_i "项目根目录：$PROJECT_ROOT"
 
-# ===== 配置 sudoers（电源管理权限）=====
-CURRENT_USER="$(whoami)"
-log_i "配置 sudoers 权限（用户: $CURRENT_USER）"
+# ===== 安装认证助手 =====
+HELPER_SRC="$PROJECT_ROOT/privileged/rosdeck_auth_helper.c"
+HELPER_BIN="/usr/local/libexec/rosdeck-auth-helper"
+CONTROL_SRC="$PROJECT_ROOT/privileged/src/rosdeck_control_helper.c"
+CONTROL_BIN="/usr/local/libexec/rosdeck-control-helper"
+LEGACY_POWER_BIN="/usr/local/libexec/rosdeck-power-helper"
 
-# 检查是否已配置
-if sudo grep -q "^$CURRENT_USER.*NOPASSWD.*systemctl reboot" /etc/sudoers.d/* 2>/dev/null || \
-   sudo grep -q "^$CURRENT_USER.*NOPASSWD.*systemctl reboot" /etc/sudoers 2>/dev/null; then
-  log_i "sudoers 权限已配置"
+if [[ -f "$HELPER_SRC" ]]; then
+  INSTALL_HELPER=false
+  if [[ ! -x "$HELPER_BIN" ]]; then
+    INSTALL_HELPER=true
+  elif [[ "$HELPER_SRC" -nt "$HELPER_BIN" ]]; then
+    INSTALL_HELPER=true
+  fi
+
+  if [[ "$INSTALL_HELPER" == true ]]; then
+    log_i "编译安装认证助手"
+    sudo mkdir -p "$(dirname "$HELPER_BIN")"
+    sudo cc "$HELPER_SRC" -o "$HELPER_BIN" -O2 -Wall -Wextra -lpam -lpam_misc
+    sudo chown root:root "$HELPER_BIN"
+    sudo chmod 4755 "$HELPER_BIN"
+    log_i "认证助手已安装：$HELPER_BIN"
+  else
+    log_i "认证助手已存在且为最新"
+  fi
 else
-  log_i "添加 sudoers 配置"
-  echo "$CURRENT_USER ALL=(ALL) NOPASSWD: /usr/bin/systemctl reboot" | sudo tee /etc/sudoers.d/rosdeck >/dev/null
-  echo "$CURRENT_USER ALL=(ALL) NOPASSWD: /usr/bin/systemctl poweroff" | sudo tee -a /etc/sudoers.d/rosdeck >/dev/null
-  sudo chmod 0440 /etc/sudoers.d/rosdeck
-  log_i "sudoers 配置完成"
+  log_w "未找到认证助手源文件：$HELPER_SRC"
+fi
+
+# 安装系统控制助手（继承电源控制能力，可扩展更多系统操作）
+if [[ -f "$CONTROL_SRC" ]]; then
+  INSTALL_CONTROL=false
+  if [[ ! -x "$CONTROL_BIN" ]]; then
+    INSTALL_CONTROL=true
+  elif [[ "$CONTROL_SRC" -nt "$CONTROL_BIN" ]]; then
+    INSTALL_CONTROL=true
+  fi
+
+  if [[ "$INSTALL_CONTROL" == true ]]; then
+    log_i "编译安装系统控制助手"
+    sudo mkdir -p "$(dirname "$CONTROL_BIN")"
+    sudo cc "$CONTROL_SRC" -o "$CONTROL_BIN" -O2 -Wall -Wextra
+    sudo chown root:root "$CONTROL_BIN"
+    sudo chmod 4755 "$CONTROL_BIN"
+    log_i "系统控制助手已安装：$CONTROL_BIN"
+    if [[ -e "$LEGACY_POWER_BIN" && ! -L "$LEGACY_POWER_BIN" ]]; then
+      log_w "检测到旧版控制助手（原电源助手），可根据需要手动移除：$LEGACY_POWER_BIN"
+    fi
+    sudo ln -sf "$CONTROL_BIN" "$LEGACY_POWER_BIN"
+  else
+    log_i "系统控制助手已存在且为最新"
+    sudo ln -sf "$CONTROL_BIN" "$LEGACY_POWER_BIN"
+  fi
+else
+  log_w "未找到系统控制助手源文件：$CONTROL_SRC"
 fi
 
 # ===== 同步前端到 Nginx 路径（不改变你的既有逻辑）=====
@@ -141,7 +183,7 @@ echo "$NEW_PID" | sudo tee "$PIDFILE" >/dev/null
 log_i "后端已启动 (PID=$NEW_PID)"
 
 # ===== 健康检查（简短，不通过仅提示）=====
-sleep 2  # ✅ 延长等待时间
+sleep 5  # ✅ 延长等待时间
 MAX_RETRY=5
 RETRY_COUNT=0
 
@@ -156,11 +198,6 @@ while [ $RETRY_COUNT -lt $MAX_RETRY ]; do
   fi
 done
 
-if curl -fsS "http://${BACKEND_HOST}:${BACKEND_PORT}/api/health" >/dev/null 2>&1; then
-  log_i "后端健康检查通过"
-else
-  log_w "后端健康检查未通过，请查看日志：$BACKEND_LOG"
-fi
 
 # ===== 汇总 =====
 echo

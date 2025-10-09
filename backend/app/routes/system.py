@@ -3,13 +3,12 @@
 """
 from fastapi import APIRouter, Depends, HTTPException, Response
 from pydantic import BaseModel
-import subprocess
 import logging
-import asyncio
-from datetime import datetime, timedelta
+from datetime import datetime
 from app.services.system_monitor import system_monitor
 from app.deps.csrf import csrf_protection
 from app.deps.admin_auth import admin_auth
+from app.services.admin_privileged import execute_power_action
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/system", tags=["系统管理"])
@@ -69,34 +68,25 @@ async def power_control(body: PowerRequest, response: Response):
             detail={"message": "无效的操作,仅支持 restart 或 shutdown"}
         )
     
-    # 计算延迟执行时间 (5 秒后)
-    scheduled_time = datetime.utcnow() + timedelta(seconds=5)
-    scheduled_time_str = scheduled_time.isoformat() + "Z"
-    
-    # 准备系统命令
     if action == "restart":
-        command = ["sudo", "systemctl", "reboot"]
-        message = "系统将在 5 秒后重启"
-    else:  # shutdown
-        command = ["sudo", "systemctl", "poweroff"]
-        message = "系统将在 5 秒后关机"
-    
-    # 异步执行(延迟 5 秒)
-    async def delayed_power_action():
-        await asyncio.sleep(5)
-        try:
-            logger.warning(f"执行电源操作: {action}")
-            subprocess.run(command, check=True, timeout=10)
-        except subprocess.CalledProcessError as e:
-            logger.error(f"电源操作失败: {e}")
-        except Exception as e:
-            logger.error(f"电源操作异常: {e}")
-    
-    # 启动后台任务
-    asyncio.create_task(delayed_power_action())
-    
-    logger.warning(f"已安排电源操作: {action}, 将在 {scheduled_time_str} 执行")
-    
+        message = "系统即将重启"
+        helper_action = "reboot"
+    else:
+        message = "系统即将关机"
+        helper_action = "shutdown"
+
+    logger.warning(f"执行电源操作: {action}")
+
+    if not execute_power_action(helper_action):
+        logger.error(f"电源操作触发失败: {action}")
+        raise HTTPException(
+            status_code=500,
+            detail={"message": "电源操作执行失败", "action": action}
+        )
+
+    scheduled_time = datetime.utcnow()
+    scheduled_time_str = scheduled_time.isoformat() + "Z"
+
     return PowerResponse(
         success=True,
         message=message,

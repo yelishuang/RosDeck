@@ -1,1 +1,9 @@
 # OS / editors
+
+# Python artifacts
+__pycache__/
+*.py[cod]
+
+# Virtual environments
+.venv/
+*/.venv/

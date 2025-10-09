@@ -8,3 +8,6 @@ psutil==5.9.6
 
 # Linux PAM 认证
 python-pam==2.0.2
+
+# 运行时依赖
+six==1.16.0

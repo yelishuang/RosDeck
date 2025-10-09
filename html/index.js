@@ -6,11 +6,25 @@
 // ==================== 全局变量 ====================
 let currentModule = 'overview';
 let adminModeActive = false;
+let adminModePending = false;
 let statusUpdateInterval = null;
+let deviceInfoInterval = null;
+let powerActionPending = false;
+
+const DEVICE_INFO_REFRESH_MS = 60000;
+const API_VERIFY_ADMIN = '/api/auth/verify-admin';
+const STORAGE_KEYS = {
+    csrf: 'rosdeck_csrf_token'
+};
 
 // ==================== 页面加载完成 ====================
 $(document).ready(function() {
     console.log('RosDeck 初始化...');
+
+    // 同步 CSRF Token（如从登录页传递）
+    ensureCsrfToken().catch(err => {
+        console.error('初始化 CSRF Token 失败:', err);
+    });
     
     // 初始化各个模块
     initSidebar();
@@ -23,6 +37,7 @@ $(document).ready(function() {
     
     // 启动状态更新定时器
     startStatusUpdate();
+    startDeviceInfoUpdates();
 });
 
 // ==================== 侧边栏功能 ====================
@@ -157,6 +172,77 @@ function formatUptime(seconds) {
     } else {
         return `${minutes}分钟`;
     }
+}
+
+// ==================== 设备信息 ====================
+function startDeviceInfoUpdates() {
+    if (deviceInfoInterval) {
+        clearInterval(deviceInfoInterval);
+        deviceInfoInterval = null;
+    }
+    
+    updateDeviceInfo();
+    deviceInfoInterval = setInterval(updateDeviceInfo, DEVICE_INFO_REFRESH_MS);
+}
+
+function updateDeviceInfo() {
+    fetch('/api/device/info')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            renderDeviceInfo(data);
+        })
+        .catch(error => {
+            console.error('获取设备信息失败:', error);
+            renderDeviceInfo();
+        });
+}
+
+function renderDeviceInfo(raw = {}) {
+    const defaults = {
+        hostname: 'Unknown',
+        status: 'offline',
+        os: 'Unknown',
+        architecture: 'Unknown',
+        ip_address: '0.0.0.0'
+    };
+    
+    const data = Object.assign({}, defaults, raw || {});
+    const deviceCard = $('.device-card');
+    
+    if (!deviceCard.length) {
+        return;
+    }
+    
+    deviceCard.find('.device-name').text(data.hostname || defaults.hostname);
+    
+    const status = String(data.status || defaults.status).toLowerCase();
+    const statusLabel = status === 'online' ? '设备在线' : '设备离线';
+    const statusElement = deviceCard.find('.device-label');
+    
+    if (statusElement.length) {
+        statusElement.text(statusLabel);
+    }
+    
+    const statusContainer = deviceCard.find('.device-status');
+    statusContainer
+        .removeClass('state-online state-offline')
+        .addClass(status === 'online' ? 'state-online' : 'state-offline');
+    
+    const pulseDot = deviceCard.find('.pulse-dot');
+    if (pulseDot.length) {
+        if (status === 'online') {
+            pulseDot.removeClass('is-offline');
+        } else {
+            pulseDot.addClass('is-offline');
+        }
+    }
+    
+    console.log('设备信息已更新:', data);
 }
 
 // 更新运行时间
@@ -324,15 +410,56 @@ function toggleAdminMode() {
     }
 }
 
-function promptAdminPassword() {
+async function promptAdminPassword() {
     // TODO: 实现密码输入对话框
     // 这里暂时用简单的 prompt 演示
     const password = prompt('请输入管理员密码 (root 密码):');
     
-    if (password) {
-        // TODO: 验证密码
-        // 模拟验证成功
+    if (!password) {
+        return;
+    }
+
+    await verifyAdminPassword(password);
+}
+
+async function verifyAdminPassword(password) {
+    if (adminModePending) {
+        return;
+    }
+
+    const csrfToken = await ensureCsrfToken();
+    if (!csrfToken) {
+        toastr.error('CSRF Token 未初始化，请重新登录后再试', '错误');
+        return;
+    }
+
+    adminModePending = true;
+
+    try {
+        if (typeof toastr !== 'undefined') {
+            toastr.clear();
+        }
+        toastr.info('正在验证管理员权限...', '校验中');
+        const { response, data } = await postJson(API_VERIFY_ADMIN, { password }, {
+            headers: { 'X-CSRF-Token': csrfToken }
+        });
+
+        if (!response.ok || data?.success !== true) {
+            const message = data?.message || (response.status === 401 ? '密码错误，请重试' : '管理员验证失败');
+            toastr.error(message, '验证失败');
+            return;
+        }
+
         activateAdminMode();
+    } catch (error) {
+        if (error.name === 'AbortError') {
+            toastr.error('管理员验证超时，请重试', '超时');
+        } else {
+            toastr.error('管理员验证出现异常，请检查网络', '异常');
+        }
+        console.error('管理员验证失败:', error);
+    } finally {
+        adminModePending = false;
     }
 }
 
@@ -345,6 +472,9 @@ function activateAdminMode() {
     $('.label-status').text('已激活');
     $('.user-role').text('管理员');
     
+    if (typeof toastr !== 'undefined') {
+        toastr.clear();
+    }
     toastr.success('管理员模式已激活', '成功');
     console.log('管理员模式激活');
 }
@@ -358,29 +488,70 @@ function deactivateAdminMode() {
     $('.label-status').text('未激活');
     $('.user-role').text('普通用户');
     
+    if (typeof toastr !== 'undefined') {
+        toastr.clear();
+    }
     toastr.info('管理员模式已退出', '提示');
     console.log('管理员模式退出');
 }
 
 // ==================== 电源操作 ====================
-function handlePowerAction(action) {
+async function handlePowerAction(action) {
     const actionText = action === 'restart' ? '重启系统' : '关闭系统';
     
-    if (confirm(`确定要${actionText}吗？`)) {
+    if (!confirm(`确定要${actionText}吗？`)) {
+        return;
+    }
+
+    if (!adminModeActive) {
+        toastr.warning('需要管理员权限', '提示');
+        await promptAdminPassword();
         if (!adminModeActive) {
-            toastr.warning('需要管理员权限', '提示');
-            promptAdminPassword();
             return;
         }
-        
-        // TODO: 调用后端API执行重启/关机
-        toastr.info(`正在${actionText}...`, '操作中');
-        console.log(`执行操作: ${action}`);
-        
-        // 模拟操作
-        setTimeout(() => {
-            toastr.success(`${actionText}命令已发送`, '成功');
-        }, 1000);
+    }
+
+    if (powerActionPending) {
+        toastr.info('已有电源操作正在执行，请稍候', '提示');
+        return;
+    }
+
+    const csrfToken = await ensureCsrfToken();
+    if (!csrfToken) {
+        toastr.error('无法获取 CSRF Token，请刷新页面后重试', '错误');
+        return;
+    }
+
+    powerActionPending = true;
+    if (typeof toastr !== 'undefined') {
+        toastr.clear();
+    }
+    toastr.info(`正在${actionText}...`, '操作中');
+
+    try {
+        const { response, data } = await postJson('/api/system/power', { action }, {
+            headers: { 'X-CSRF-Token': csrfToken }
+        });
+
+        if (!response.ok || data?.success !== true) {
+            const message = data?.message || `执行${actionText}失败`;
+            toastr.error(message, '失败');
+            console.error(`电源操作失败: ${action}`, { status: response.status, data });
+            return;
+        }
+
+        const successMessage = data.message || `${actionText}命令已发送`;
+        toastr.success(successMessage, '成功');
+        console.log(`电源操作已触发: ${action}`, data);
+    } catch (error) {
+        if (error.name === 'AbortError') {
+            toastr.error(`${actionText}请求超时，请重试`, '超时');
+        } else {
+            toastr.error(`执行${actionText}时出现异常`, '异常');
+        }
+        console.error('电源操作异常:', error);
+    } finally {
+        powerActionPending = false;
     }
 }
 
@@ -401,3 +572,65 @@ window.addEventListener('beforeunload', function() {
         clearInterval(statusUpdateInterval);
     }
 });
+async function ensureCsrfToken() {
+    const meta = document.querySelector('meta[name="csrf-token"]');
+    let token = meta ? meta.getAttribute('content') : null;
+
+    if (!token) {
+        try {
+            const stored = sessionStorage.getItem(STORAGE_KEYS.csrf);
+            if (stored) {
+                token = stored;
+                if (meta) {
+                    meta.setAttribute('content', stored);
+                }
+            }
+        } catch (err) {
+            token = null;
+        }
+    }
+
+    if (token) {
+        try { sessionStorage.setItem(STORAGE_KEYS.csrf, token); } catch (err) {}
+        return token;
+    }
+
+    try {
+        const response = await fetch('/api/csrf-token', { credentials: 'include' });
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+        const payload = await response.json();
+        token = payload?.token || null;
+        if (token) {
+            if (meta) {
+                meta.setAttribute('content', token);
+            }
+            try { sessionStorage.setItem(STORAGE_KEYS.csrf, token); } catch (err) {}
+        }
+        return token;
+    } catch (err) {
+        console.error('获取 CSRF Token 失败:', err);
+        return null;
+    }
+}
+
+async function postJson(url, payload, { headers = {}, signal } = {}) {
+    const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            ...headers
+        },
+        body: JSON.stringify(payload),
+        credentials: 'include',
+        signal
+    });
+    let data = null;
+    try {
+        data = await response.clone().json();
+    } catch (err) {
+        data = null;
+    }
+    return { response, data };
+}

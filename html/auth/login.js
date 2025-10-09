@@ -7,6 +7,9 @@
   const API_METRICS  = "/api/metrics";         // 埋点（没有也不报错）
   const DEFAULT_REDIRECT = "../index.html";
   const REQUEST_TIMEOUT_MS = 10000;
+  const STORAGE_KEYS = {
+    csrf: "rosdeck_csrf_token"
+  };
 
   const T = {
     loading: "正在登录…",
@@ -44,7 +47,11 @@
 
   const getCsrf = ()=>{
     const m=document.querySelector('meta[name="csrf-token"]');
-    return m? m.getAttribute("content"): null;
+    const token = m? m.getAttribute("content"): null;
+    if(token){
+      try{ sessionStorage.setItem(STORAGE_KEYS.csrf, token); }catch{}
+    }
+    return token;
   };
 
   async function fetchJSON(url, options={}, timeout=REQUEST_TIMEOUT_MS){

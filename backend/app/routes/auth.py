@@ -10,6 +10,7 @@ import time
 from app.deps.rate_limit import rate_limiter
 from app.deps.csrf import csrf_protection
 from app.deps.admin_auth import admin_auth
+from app.services.admin_privileged import verify_root_password
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/auth", tags=["认证"])
@@ -156,8 +157,8 @@ async def verify_admin(body: AdminVerifyRequest, response: Response):
             }
         )
     
-    # 使用 PAM 验证 root 用户
-    if not authenticate_linux_user("root", password):
+    # 使用特权助手验证 root 用户
+    if not verify_root_password(password):
         logger.warning(f"Failed admin verification attempt")
         raise HTTPException(
             status_code=401,

@@ -1,149 +1,133 @@
 """
 ROS 2 监控服务
-通过执行 ROS 2 CLI 命令获取统计数据
+通过长期驻留的 rclpy 节点获取节点/话题/服务统计
 """
-import subprocess
+import copy
 import logging
 import os
-from typing import Dict, Any
+import threading
+import time
 from datetime import datetime
+from typing import Any, Dict, Optional
+
+try:
+    import rclpy
+    from rclpy.executors import SingleThreadedExecutor
+except ImportError:  # pragma: no cover - 仅在缺失 ROS 环境时触发
+    rclpy = None  # type: ignore
+    SingleThreadedExecutor = None  # type: ignore
 
 logger = logging.getLogger(__name__)
 
 
 class ROSMonitor:
-    """ROS 2 监控服务"""
+    """ROS 2 监控服务（基于 rclpy 后台节点）"""
     
     def __init__(self):
-        self._ros_available = None
-        self._last_check_time = 0
-        self._check_interval = 10  # 每 10 秒检查一次 ROS 可用性
-    
-    def _is_ros_available(self) -> bool:
-        """检查 ROS 2 是否可用"""
-        import time
-        current_time = time.time()
+        self._node_name = "rosdeck_stats_monitor"
+        self._update_interval = 5.0  # 刷新间隔（秒）
+        self._ros_version_hint = self._resolve_ros_version()
         
-        # 缓存检查结果
-        if self._ros_available is not None and \
-           (current_time - self._last_check_time) < self._check_interval:
-            return self._ros_available
+        self._stats: Dict[str, Any] = self._default_stats()
+        self._lock = threading.Lock()
+        self._stop_event = threading.Event()
+        self._primed_event = threading.Event()
+        self._worker: Optional[threading.Thread] = None
+        
+        if rclpy is None or SingleThreadedExecutor is None:
+            logger.warning("未检测到 rclpy，ROS 指标将返回默认值")
+            self._primed_event.set()
+            return
+        
+        self._worker = threading.Thread(
+            target=self._refresh_loop,
+            name="rosdeck-ros-monitor",
+            daemon=True
+        )
+        self._worker.start()
+    
+    def _default_stats(self) -> Dict[str, Any]:
+        """构造默认统计数据"""
+        return {
+            "active_nodes": 0,
+            "topics_count": 0,
+            "services_count": 0,
+            "stability_percent": 0.0,
+            "ros_version": self._ros_version_hint,
+            "last_updated": datetime.utcnow().isoformat() + "Z"
+        }
+    
+    @staticmethod
+    def _resolve_ros_version() -> str:
+        """尝试推断 ROS 版本"""
+        distro = os.environ.get("ROS_DISTRO", "").strip()
+        if distro:
+            return f"ROS 2 {distro.capitalize()}"
+        return "ROS 2"
+    
+    def _refresh_loop(self):
+        """后台刷新循环：维护 rclpy 节点并定期采样"""
+        node = None
+        executor = None
+        initialized = False
         
         try:
-            # 检查 ROS 2 命令是否存在
-            result = subprocess.run(
-                ['which', 'ros2'],
-                capture_output=True,
-                timeout=2
-            )
-            available = result.returncode == 0
+            rclpy.init(args=None)
+            initialized = True
+            node = rclpy.create_node(self._node_name)
+            executor = SingleThreadedExecutor()
+            executor.add_node(node)
             
-            self._ros_available = available
-            self._last_check_time = current_time
-            return available
-        except Exception as e:
-            logger.warning(f"检查 ROS 2 可用性失败: {e}")
-            self._ros_available = False
-            self._last_check_time = current_time
-            return False
+            next_sample = 0.0
+            while not self._stop_event.is_set():
+                executor.spin_once(timeout_sec=0.1)
+                
+                if time.monotonic() >= next_sample:
+                    stats = self._build_stats_snapshot(node)
+                    with self._lock:
+                        self._stats = stats
+                    self._primed_event.set()
+                    next_sample = time.monotonic() + self._update_interval
+        except Exception as exc:
+            logger.exception("ROS 指标服务启动失败，返回默认数据: %s", exc)
+            self._primed_event.set()
+        finally:
+            if executor and node:
+                executor.remove_node(node)
+            if node is not None:
+                node.destroy_node()
+            if initialized:
+                try:
+                    rclpy.shutdown()
+                except Exception as exc:  # pragma: no cover - 仅用于日志
+                    logger.warning("关闭 rclpy 失败: %s", exc)
     
-    def _run_ros_command(self, command: list, timeout: int = 5) -> str:
-        """执行 ROS 2 命令"""
+    def _build_stats_snapshot(self, node) -> Dict[str, Any]:
+        """采集当前 ROS 图谱数据"""
         try:
-            # 设置 ROS 2 环境变量(如果需要)
-            env = os.environ.copy()
-            
-            # 执行命令
-            result = subprocess.run(
-                command,
-                capture_output=True,
-                text=True,
-                timeout=timeout,
-                env=env
+            node_entries = node.get_node_names_and_namespaces()
+            active_nodes = sum(
+                1 for name, _ in node_entries
+                if name and name != self._node_name
             )
-            
-            if result.returncode == 0:
-                return result.stdout.strip()
-            else:
-                logger.error(f"ROS 命令失败: {result.stderr}")
-                return ""
-        except subprocess.TimeoutExpired:
-            logger.error(f"ROS 命令超时: {command}")
-            return ""
-        except Exception as e:
-            logger.error(f"执行 ROS 命令异常: {e}")
-            return ""
-    
-    def get_active_nodes(self) -> int:
-        """获取活跃节点数"""
-        if not self._is_ros_available():
-            return 0
+        except Exception as exc:
+            logger.error("获取 ROS 节点列表失败: %s", exc)
+            active_nodes = 0
         
-        output = self._run_ros_command(['ros2', 'node', 'list'])
-        if not output:
-            return 0
+        try:
+            topics = node.get_topic_names_and_types()
+            topics_count = len(topics)
+        except Exception as exc:
+            logger.error("获取 ROS 话题列表失败: %s", exc)
+            topics_count = 0
         
-        # 统计非空行数
-        nodes = [line for line in output.split('\n') if line.strip()]
-        return len(nodes)
-    
-    def get_topics_count(self) -> int:
-        """获取话题数"""
-        if not self._is_ros_available():
-            return 0
+        try:
+            services = node.get_service_names_and_types()
+            services_count = len(services)
+        except Exception as exc:
+            logger.error("获取 ROS 服务列表失败: %s", exc)
+            services_count = 0
         
-        output = self._run_ros_command(['ros2', 'topic', 'list'])
-        if not output:
-            return 0
-        
-        topics = [line for line in output.split('\n') if line.strip()]
-        return len(topics)
-    
-    def get_services_count(self) -> int:
-        """获取服务数"""
-        if not self._is_ros_available():
-            return 0
-        
-        output = self._run_ros_command(['ros2', 'service', 'list'])
-        if not output:
-            return 0
-        
-        services = [line for line in output.split('\n') if line.strip()]
-        return len(services)
-    
-    def get_ros_version(self) -> str:
-        """获取 ROS 版本"""
-        if not self._is_ros_available():
-            return "ROS 2 (未检测到)"
-        
-        # 尝试从环境变量获取
-        ros_distro = os.environ.get('ROS_DISTRO', '')
-        if ros_distro:
-            return f"ROS 2 {ros_distro.capitalize()}"
-        
-        # 默认返回
-        return "ROS 2 Humble"
-    
-    def calculate_stability(self, active_nodes: int) -> float:
-        """
-        计算系统稳定性
-        简单实现: 基于节点数量判断
-        - 0 节点: 0%
-        - 1-5 节点: 95%
-        - 6+ 节点: 99.8%
-        """
-        if active_nodes == 0:
-            return 0.0
-        elif active_nodes <= 5:
-            return 95.0
-        else:
-            return 99.8
-    
-    def get_stats(self) -> Dict[str, Any]:
-        """获取完整的 ROS 统计数据"""
-        active_nodes = self.get_active_nodes()
-        topics_count = self.get_topics_count()
-        services_count = self.get_services_count()
         stability = self.calculate_stability(active_nodes)
         
         return {
@@ -151,9 +135,35 @@ class ROSMonitor:
             "topics_count": topics_count,
             "services_count": services_count,
             "stability_percent": stability,
-            "ros_version": self.get_ros_version(),
+            "ros_version": self._resolve_ros_version(),
             "last_updated": datetime.utcnow().isoformat() + "Z"
         }
+    
+    @staticmethod
+    def calculate_stability(active_nodes: int) -> float:
+        """
+        计算系统稳定性
+        简单策略: 基于节点数量估算
+        """
+        if active_nodes == 0:
+            return 0.0
+        if active_nodes <= 5:
+            return 95.0
+        return 99.8
+    
+    def get_stats(self) -> Dict[str, Any]:
+        """获取完整的 ROS 统计数据"""
+        if not self._primed_event.is_set():
+            self._primed_event.wait(timeout=1.0)
+        
+        with self._lock:
+            return copy.deepcopy(self._stats)
+    
+    def shutdown(self):
+        """测试或应用关闭时调用"""
+        self._stop_event.set()
+        if self._worker and self._worker.is_alive():
+            self._worker.join(timeout=2.0)
 
 
 # 全局实例

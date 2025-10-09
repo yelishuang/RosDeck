@@ -91,8 +91,8 @@ class SystemMonitor:
             return cached
         
         try:
-            # 采样 0.5 秒获取 CPU 使用率
-            cpu_percent = psutil.cpu_percent(interval=0.5)
+            # 缩短采样窗口，降低接口首次调用延迟
+            cpu_percent = psutil.cpu_percent(interval=0.1)
             cpu_count = psutil.cpu_count()
             
             data = {

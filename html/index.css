@@ -382,12 +382,20 @@ body {
     letter-spacing: 0.05em;
 }
 
+.device-status.state-offline {
+    color: var(--danger);
+}
+
 .pulse-dot {
     width: 6px;
     height: 6px;
     border-radius: 50%;
     background: var(--success);
     animation: pulse 2s ease-in-out infinite;
+}
+
+.pulse-dot.is-offline {
+    background: var(--danger);
 }
 
 @keyframes pulse {
