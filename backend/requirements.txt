@@ -1,6 +1,8 @@
 # FastAPI 框架
 fastapi==0.104.1
 uvicorn==0.24.0
+# WebSocket 支持
+websockets==12.0
 pydantic==1.10.13
 
 # 系统监控
@@ -14,3 +16,6 @@ python-multipart==0.0.20
 
 # 运行时依赖
 six==1.16.0
+
+# 终端支持
+ptyprocess==0.7.0

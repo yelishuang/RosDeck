@@ -79,11 +79,13 @@
 - **技术栈**：jQuery + ES 模块风格脚本，统一使用 4 空格缩进、camelCase 函数命名。
 - **状态同步**：
   - `index.js` 负责全局状态栏、侧边栏、管理员模式切换、定时刷新 `/api/system/status`。
+  - 管理员模式退出会调用 `/api/auth/admin-logout`，确保清除后端 session 并向模块广播 `rosdeck:admin-mode-change` 事件以刷新权限相关视图。
   - 概览模块示例展示了如何轮询 `/api/ros/stats` 并渲染数据。
   - CSRF Token 通过本地存储 `rosdeck_csrf_token` 维护，需要在提交敏感操作时写入 `X-CSRF-Token`。
 - **模块现状**：
   - `overview` 已绑定 ROS 指标。
-  - `network`、`storage`、`file-transfer` 等页面已有基础结构，但部分 JS 仍待实现（如 `terminal/main.js` 为空）。
+  - `file-transfer` 已实现目录列表、上传（50 MB 限制）、单文件下载与删除，普通用户限制在 `~`，管理员可访问任意路径并在敏感目录提示风险。
+  - `network`、`storage` 等页面已有基础结构，但部分 JS 仍待实现（如 `terminal/main.js` 为空）。
   - 未来的“大模型交互”尚未落地，可在此基础上新增模块如 `modules/ai-console/`。
 
 ## 7. 特权助手与系统依赖

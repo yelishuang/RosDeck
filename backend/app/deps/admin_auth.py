@@ -108,3 +108,55 @@ class AdminAuthManager:
 
 # 全局实例
 admin_auth = AdminAuthManager(session_timeout=1800)  # 30 分钟
+
+
+def extract_username_from_session(session_id: str) -> str:
+    """
+    从 session_id 中提取用户名.
+
+    session_id 约定格式: session_{username}_{timestamp}
+    通过从最后一个下划线拆分, 以支持用户名中包含下划线的情况.
+    """
+    prefix = "session_"
+    if not session_id.startswith(prefix):
+        raise ValueError("session_id 格式无效: 缺少前缀")
+
+    # 移除前缀后, 将最后一个下划线视为时间戳分隔符
+    username_part = session_id[len(prefix):]
+    username, separator, ts = username_part.rpartition("_")
+
+    if not separator:
+        raise ValueError("session_id 格式无效: 缺少时间戳分隔符")
+
+    if not username:
+        raise ValueError("session_id 格式无效: 用户名为空")
+
+    if not ts.isdigit():
+        raise ValueError("session_id 格式无效: 时间戳不是数字")
+
+    return username
+
+
+async def get_current_username(request: Request) -> str:
+    """
+    FastAPI 依赖: 获取当前登录用户名.
+
+    如果 Cookie 中缺少 session_id 或格式非法, 返回 401.
+    """
+    session_id = request.cookies.get("session_id")
+    if not session_id:
+        raise HTTPException(
+            status_code=401,
+            detail={"message": "未登录或会话已过期", "code": "AUTH_REQUIRED"}
+        )
+
+    try:
+        username = extract_username_from_session(session_id)
+    except ValueError as exc:
+        logger.warning(f"Invalid session_id detected: {session_id} ({exc})")
+        raise HTTPException(
+            status_code=401,
+            detail={"message": "会话无效, 请重新登录", "code": "AUTH_INVALID_SESSION"}
+        ) from exc
+
+    return username
