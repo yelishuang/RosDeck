@@ -1,8 +1,139 @@
-<div class="module-placeholder">
-    <div class="placeholder-icon">
-        <i class="bi bi-ethernet"></i>
+<div class="network-module">
+    <div class="network-container">
+        <!-- 左侧面板: 网络接口列表 -->
+        <aside class="interfaces-panel">
+            <div class="panel-header">
+                <h3 class="panel-title">网络接口</h3>
+                <button class="btn-icon btn-refresh" id="btn-refresh-interfaces" title="刷新">
+                    <i class="bi bi-arrow-clockwise"></i>
+                </button>
+            </div>
+            <div class="panel-body" id="interfaces-list">
+                <div class="loading-message">
+                    <i class="bi bi-arrow-clockwise spinner"></i>
+                    <span>加载中...</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- 中央面板: 实时流量图表 -->
+        <main class="traffic-panel">
+            <div class="panel-header">
+                <h3 class="panel-title">实时流量监控</h3>
+                <div class="time-window-selector">
+                    <button class="btn-time-window" data-window="1min">1分钟</button>
+                    <button class="btn-time-window active" data-window="5min">5分钟</button>
+                    <button class="btn-time-window" data-window="15min">15分钟</button>
+                </div>
+            </div>
+            <div class="panel-body">
+                <div class="chart-container">
+                    <canvas id="traffic-chart"></canvas>
+                </div>
+                <div class="traffic-legend">
+                    <div class="legend-item">
+                        <span class="legend-color upload"></span>
+                        <span class="legend-label">上传: <span id="upload-speed">0 KB/s</span></span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-color download"></span>
+                        <span class="legend-label">下载: <span id="download-speed">0 KB/s</span></span>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- 右侧面板: 连接状态 -->
+        <aside class="connections-panel">
+            <div class="panel-header">
+                <h3 class="panel-title">网络连接</h3>
+                <button class="btn-icon btn-refresh" id="btn-refresh-connections" title="刷新">
+                    <i class="bi bi-arrow-clockwise"></i>
+                </button>
+            </div>
+            <div class="panel-body" id="connections-content">
+                <div class="loading-message">
+                    <i class="bi bi-arrow-clockwise spinner"></i>
+                    <span>加载中...</span>
+                </div>
+            </div>
+        </aside>
     </div>
-    <h2 class="placeholder-title">网络模块</h2>
-    <p class="placeholder-desc">网络接口监控与配置</p>
-    <div class="placeholder-status">开发中...</div>
+
+    <!-- 管理员配置面板(可折叠) -->
+    <section class="config-panel" id="config-panel" style="display: none;">
+        <div class="config-header">
+            <h3>网络配置 <span class="admin-badge">管理员</span></h3>
+            <button class="btn-icon btn-collapse" id="btn-collapse-config">
+                <i class="bi bi-chevron-up"></i>
+            </button>
+        </div>
+        <div class="config-body" id="config-body">
+            <div class="config-tabs">
+                <button class="config-tab active" data-tab="ip-config">IP配置</button>
+                <button class="config-tab" data-tab="diagnostic">网络诊断</button>
+            </div>
+
+            <!-- IP配置表单 -->
+            <div class="config-tab-content" id="tab-ip-config">
+                <form id="form-ip-config" class="config-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="select-interface">接口</label>
+                            <select id="select-interface" required>
+                                <option value="">选择接口...</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="input-ip">IP地址</label>
+                            <input type="text" id="input-ip" placeholder="192.168.1.100" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="input-netmask">子网掩码/前缀</label>
+                            <input type="text" id="input-netmask" placeholder="24 或 255.255.255.0" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="input-gateway">网关(可选)</label>
+                            <input type="text" id="input-gateway" placeholder="192.168.1.1">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group form-check">
+                            <input type="checkbox" id="check-persistent">
+                            <label for="check-persistent">持久化配置(写入netplan)</label>
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">应用配置</button>
+                        <button type="button" class="btn btn-secondary" id="btn-reset-form">重置</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- 网络诊断表单 -->
+            <div class="config-tab-content" id="tab-diagnostic" style="display: none;">
+                <form id="form-diagnostic" class="config-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="input-ping-target">目标地址</label>
+                            <input type="text" id="input-ping-target" placeholder="8.8.8.8 或 www.example.com" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="input-ping-count">次数</label>
+                            <input type="number" id="input-ping-count" value="4" min="1" max="20">
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">执行 Ping</button>
+                    </div>
+                </form>
+                <div class="diagnostic-output" id="diagnostic-output" style="display: none;">
+                    <h4>输出结果</h4>
+                    <pre id="diagnostic-result"></pre>
+                </div>
+            </div>
+        </div>
+    </section>
 </div>

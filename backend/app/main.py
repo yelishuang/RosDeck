@@ -14,6 +14,8 @@ from app.routes import ros
 from app.routes import device
 from app.routes import files
 from app.routes import terminal
+from app.routes import network
+from app.routes import logs
 
 # 导入依赖
 from app.deps.csrf import csrf_protection
@@ -55,6 +57,8 @@ app.include_router(ros.router)
 app.include_router(device.router)
 app.include_router(files.router)
 app.include_router(terminal.router)
+app.include_router(network.router)
+app.include_router(logs.router)
 
 # 埋点接口
 @app.post("/api/metrics")

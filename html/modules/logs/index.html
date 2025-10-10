@@ -1,8 +1,69 @@
-<div class="module-placeholder">
-    <div class="placeholder-icon">
-        <i class="bi bi-file-earmark-text"></i>
+<div class="logs-module">
+    <div class="card logs-filter-card shadow-sm">
+        <div class="card-header gradient-header">
+            <div class="title-group">
+                <i class="bi bi-sliders"></i>
+                <span>日志筛选</span>
+            </div>
+            <div class="badge access-badge d-none" id="logs-access-badge"></div>
+        </div>
+        <div class="card-body">
+            <div class="filters-grid">
+                <div class="filter-item">
+                    <label for="logs-priority-select">优先级</label>
+                    <select id="logs-priority-select" class="form-select"></select>
+                </div>
+                <div class="filter-item">
+                    <label for="logs-keyword-input">关键字</label>
+                    <input id="logs-keyword-input" type="text" class="form-control" placeholder="支持正则表达式">
+                </div>
+                <div class="filter-item">
+                    <label for="logs-since-input">起始时间</label>
+                    <input id="logs-since-input" type="datetime-local" class="form-control">
+                </div>
+                <div class="filter-item">
+                    <label for="logs-until-input">结束时间</label>
+                    <input id="logs-until-input" type="datetime-local" class="form-control">
+                </div>
+                <div class="filter-item">
+                    <label for="logs-limit-input">每次加载行数</label>
+                    <input id="logs-limit-input" type="number" class="form-control" min="1" value="200">
+                </div>
+            </div>
+            <div class="filter-actions">
+                <button id="logs-search-btn" class="btn btn-primary">
+                    <i class="bi bi-search"></i>
+                    <span>查询日志</span>
+                </button>
+                <button id="logs-reset-btn" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-counterclockwise"></i>
+                    <span>重置</span>
+                </button>
+            </div>
+        </div>
     </div>
-    <h2 class="placeholder-title">日志模块</h2>
-    <p class="placeholder-desc">实时查看系统和应用日志</p>
-    <div class="placeholder-status">开发中...</div>
+
+    <div class="card logs-result-card shadow-sm">
+        <div class="card-header gradient-header">
+            <div class="summary">
+                <i class="bi bi-journal-text"></i>
+                <span id="logs-summary-text">等待查询</span>
+            </div>
+            <div class="controls">
+                <button id="logs-refresh-btn" class="btn btn-sm btn-light refresh-btn">
+                    <i class="bi bi-arrow-clockwise"></i>
+                    刷新
+                </button>
+            </div>
+        </div>
+        <div class="card-body">
+            <div id="logs-message" class="logs-message">请选择条件并点击查询</div>
+            <div id="logs-list" class="logs-list d-none"></div>
+        </div>
+        <div class="card-footer">
+            <button id="logs-load-more-btn" class="btn btn-outline-primary" disabled>
+                加载更多
+            </button>
+        </div>
+    </div>
 </div>
