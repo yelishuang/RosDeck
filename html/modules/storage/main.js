@@ -131,6 +131,10 @@
         $button.addClass('active');
         $panes.removeClass('show active');
         $module.find(targetId).addClass('show active');
+
+        if (targetId === '#tab-content-trends') {
+            scheduleTrendChartResize();
+        }
     }
 
     // ==================== 数据加载与轮询 ====================
@@ -332,17 +336,23 @@
         const $status = $module.find('#storage-admin-status');
         const $placeholder = $module.find('#storage-admin-placeholder');
         const $sections = $module.find('.operations-section');
+        const $grid = $module.find('#storage-operations-grid');
+        const $footer = $module.find('.operations-footer');
 
         if (state.isAdmin) {
             $status.text('管理员模式已激活');
             $status.removeClass('bg-warning-subtle text-warning').addClass('bg-success-subtle text-success');
             $placeholder.addClass('d-none');
+            $grid.removeClass('d-none');
+            $footer.removeClass('d-none');
             $sections.removeClass('disabled');
             $sections.find('input, button, select, textarea').prop('disabled', false);
         } else {
             $status.text('需要管理员模式');
             $status.removeClass('bg-success-subtle text-success').addClass('bg-warning-subtle text-warning');
             $placeholder.removeClass('d-none');
+            $grid.addClass('d-none');
+            $footer.addClass('d-none');
             $sections.addClass('disabled');
             $sections.find('input, button, select, textarea').prop('disabled', true);
             clearCountdowns();
@@ -990,6 +1000,20 @@
                 state.charts[key].destroy();
                 state.charts[key] = null;
             }
+        });
+    }
+
+    function scheduleTrendChartResize() {
+        // 等待 Tab 切换动画完成后再触发重算，避免 hidden 状态尺寸异常
+        window.requestAnimationFrame(() => {
+            setTimeout(() => {
+                if (state.charts.trendUsage) {
+                    state.charts.trendUsage.resize();
+                }
+                if (state.charts.trendIo) {
+                    state.charts.trendIo.resize();
+                }
+            }, 0);
         });
     }
 
