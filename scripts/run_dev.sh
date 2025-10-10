@@ -129,26 +129,26 @@ fi
 log_i "前端就绪： http://localhost:${FRONTEND_PORT}/  （登录页：/auth/login.html）"
 
 # ===== 后端：准备虚拟环境与依赖 =====
-if [[ ! -d "$VENV_DIR" ]]; then
-  log_i "创建后端虚拟环境：$VENV_DIR"
-  python3 -m venv "$VENV_DIR"
-fi
+# if [[ ! -d "$VENV_DIR" ]]; then
+#   log_i "创建后端虚拟环境：$VENV_DIR"
+#   python3 -m venv "$VENV_DIR"
+# fi
 
-# 确保 Python 包结构完整
-log_i "初始化 Python 包结构"
-touch "$BACKEND_DIR/app/services/__init__.py"
-touch "$BACKEND_DIR/app/models/__init__.py"
-touch "$BACKEND_DIR/app/ws/__init__.py"
+# # 确保 Python 包结构完整
+# log_i "初始化 Python 包结构"
+# touch "$BACKEND_DIR/app/services/__init__.py"
+# touch "$BACKEND_DIR/app/models/__init__.py"
+# touch "$BACKEND_DIR/app/ws/__init__.py"
 
-# shellcheck disable=SC1091
-source "$VENV_DIR/bin/activate"
-log_i "安装后端依赖（静默）"
-pip -q install --upgrade pip
-if [[ -f "$BACKEND_DIR/requirements.txt" ]]; then
-  pip -q install -r "$BACKEND_DIR/requirements.txt"
-else
-  log_w "未找到 $BACKEND_DIR/requirements.txt，跳过依赖安装"
-fi
+# # shellcheck disable=SC1091
+# source "$VENV_DIR/bin/activate"
+# log_i "安装后端依赖（静默）"
+# pip -q install --upgrade pip
+# if [[ -f "$BACKEND_DIR/requirements.txt" ]]; then
+#   pip -q install -r "$BACKEND_DIR/requirements.txt"
+# else
+#   log_w "未找到 $BACKEND_DIR/requirements.txt，跳过依赖安装"
+# fi
 
 # ===== 后端：后台启动（独立日志与 PID）=====
 sudo mkdir -p "$LOG_DIR"
