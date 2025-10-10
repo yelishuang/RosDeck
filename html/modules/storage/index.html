@@ -1,8 +1,397 @@
-<div class="module-placeholder">
-    <div class="placeholder-icon">
-        <i class="bi bi-hdd"></i>
-    </div>
-    <h2 class="placeholder-title">存储管理</h2>
-    <p class="placeholder-desc">磁盘空间监控与文件系统管理</p>
-    <div class="placeholder-status">开发中...</div>
+<div class="storage-module">
+    <section class="storage-overview">
+        <div class="card overview-card summary-card shadow-sm">
+            <div class="card-header">
+                <div class="title">
+                    <i class="bi bi-hdd-stack"></i>
+                    <span>磁盘总览</span>
+                </div>
+                <div class="timestamp" id="storage-summary-timestamp">--</div>
+            </div>
+            <div class="card-body">
+                <div class="summary-chart">
+                    <canvas id="storage-usage-chart" height="180"></canvas>
+                </div>
+                <div class="summary-info">
+                    <div class="metric">
+                        <span class="label">总容量</span>
+                        <span class="value" id="storage-total">--</span>
+                    </div>
+                    <div class="metric">
+                        <span class="label">已用</span>
+                        <span class="value text-danger" id="storage-used">--</span>
+                    </div>
+                    <div class="metric">
+                        <span class="label">可用</span>
+                        <span class="value text-success" id="storage-free">--</span>
+                    </div>
+                    <div class="metric highlight">
+                        <span class="label">使用率</span>
+                        <span class="value" id="storage-usage-percent">--</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card overview-card io-card shadow-sm">
+            <div class="card-header">
+                <div class="title">
+                    <i class="bi bi-activity"></i>
+                    <span>实时读写</span>
+                </div>
+                <span class="badge bg-primary-subtle text-primary" id="storage-io-refresh">每 10 秒更新</span>
+            </div>
+            <div class="card-body">
+                <div class="io-metrics">
+                    <div class="metric">
+                        <div class="label">
+                            <i class="bi bi-arrow-down-right"></i>
+                            读速率
+                        </div>
+                        <div class="value" id="storage-read-rate">--</div>
+                    </div>
+                    <div class="metric">
+                        <div class="label">
+                            <i class="bi bi-arrow-up-right"></i>
+                            写速率
+                        </div>
+                        <div class="value" id="storage-write-rate">--</div>
+                    </div>
+                </div>
+                <div class="io-chart">
+                    <canvas id="storage-io-chart" height="140"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="card overview-card history-card shadow-sm">
+            <div class="card-header">
+                <div class="title">
+                    <i class="bi bi-graph-up"></i>
+                    <span>使用率趋势</span>
+                </div>
+                <div class="range">最近 10 分钟</div>
+            </div>
+            <div class="card-body">
+                <canvas id="storage-history-chart" height="200"></canvas>
+            </div>
+        </div>
+    </section>
+
+    <section class="storage-content">
+        <div class="card detail-card shadow-sm">
+            <div class="card-header detail-tabs">
+                <ul class="nav nav-tabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="tab-overview" data-bs-toggle="tab"
+                                data-target="#tab-content-overview" type="button" role="tab">
+                            <i class="bi bi-grid"></i> 监控总览
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="tab-partitions" data-bs-toggle="tab"
+                                data-target="#tab-content-partitions" type="button" role="tab">
+                            <i class="bi bi-layout-text-window-reverse"></i> 分区详情
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="tab-trends" data-bs-toggle="tab"
+                                data-target="#tab-content-trends" type="button" role="tab">
+                            <i class="bi bi-bar-chart-line"></i> 历史趋势
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="tab-report" data-bs-toggle="tab"
+                                data-target="#tab-content-report" type="button" role="tab">
+                            <i class="bi bi-download"></i> 导出报表
+                        </button>
+                    </li>
+                </ul>
+            </div>
+            <div class="card-body tab-content">
+                <div class="tab-pane fade show active" id="tab-content-overview" role="tabpanel">
+                    <div class="overview-grid">
+                        <div class="stat-card">
+                            <div class="label">磁盘总容量</div>
+                            <div class="value" id="storage-overview-total">--</div>
+                            <div class="hint">包含所有分区</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="label">平均使用率</div>
+                            <div class="value" id="storage-overview-average">--</div>
+                            <div class="hint">最近 10 分钟均值</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="label">读写峰值</div>
+                            <div class="value" id="storage-overview-peak">--</div>
+                            <div class="hint">读写速率峰值</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="label">高压分区</div>
+                            <div class="value" id="storage-overview-hotspots">--</div>
+                            <div class="hint">使用率 ≥ 85%</div>
+                        </div>
+                    </div>
+                    <div class="trend-preview">
+                        <canvas id="storage-overview-chart" height="240"></canvas>
+                    </div>
+                </div>
+
+                <div class="tab-pane fade" id="tab-content-partitions" role="tabpanel">
+                    <div class="partition-table-wrapper">
+                        <table class="table table-hover partition-table">
+                            <thead>
+                                <tr>
+                                    <th>设备</th>
+                                    <th>挂载点</th>
+                                    <th>文件系统</th>
+                                    <th>总容量</th>
+                                    <th>已用</th>
+                                    <th>使用率</th>
+                                    <th>读速率</th>
+                                    <th>写速率</th>
+                                </tr>
+                            </thead>
+                            <tbody id="storage-partition-tbody">
+                                <tr class="empty-row">
+                                    <td colspan="8">正在加载分区信息...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="tab-pane fade" id="tab-content-trends" role="tabpanel">
+                    <div class="trend-cards">
+                        <div class="trend-card shadow-sm">
+                            <div class="trend-title">
+                                <i class="bi bi-graph-up"></i>
+                                使用率变化
+                            </div>
+                            <canvas id="storage-trend-usage" height="260"></canvas>
+                        </div>
+                        <div class="trend-card shadow-sm">
+                            <div class="trend-title">
+                                <i class="bi bi-lightning"></i>
+                                读写速率
+                            </div>
+                            <canvas id="storage-trend-io" height="260"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tab-pane fade" id="tab-content-report" role="tabpanel">
+                    <div class="report-panel">
+                        <div class="description">
+                            导出当前总览、分区快照与历史采样，可选择 CSV 或 JSON 格式。
+                        </div>
+                        <div class="export-actions">
+                            <button class="btn btn-primary" data-action="export-report" data-format="csv">
+                                <i class="bi bi-file-earmark-spreadsheet"></i>
+                                导出 CSV
+                            </button>
+                            <button class="btn btn-outline-secondary" data-action="export-report" data-format="json">
+                                <i class="bi bi-braces"></i>
+                                导出 JSON
+                            </button>
+                        </div>
+                        <div class="report-status" id="storage-report-status">尚未导出报表</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card operations-card shadow-sm">
+            <div class="card-header">
+                <div class="title">
+                    <i class="bi bi-shield-lock"></i>
+                    <span>存储维护</span>
+                </div>
+                <span class="badge bg-warning-subtle text-warning" id="storage-admin-status"></span>
+            </div>
+            <div class="card-body operations-body" id="storage-operations-body">
+                <div class="admin-placeholder d-none" id="storage-admin-placeholder">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    <p>此区域仅向已激活管理员模式的用户开放。</p>
+                    <p class="hint">请使用左上角按钮验证管理员身份。</p>
+                </div>
+
+                <div class="operations-section" id="storage-safe-ops">
+                    <h5>
+                        <i class="bi bi-broom"></i>
+                        安全清理
+                    </h5>
+                    <form id="storage-cleanup-form" class="cleanup-form">
+                        <div class="targets">
+                            <label class="form-check">
+                                <input type="radio" class="form-check-input" name="cleanup-target" value="tmp_dirs" checked>
+                                <span class="form-check-label">临时目录 (/tmp, /var/tmp)</span>
+                            </label>
+                            <label class="form-check">
+                                <input type="radio" class="form-check-input" name="cleanup-target" value="apt_cache">
+                                <span class="form-check-label">软件包缓存 (/var/cache/apt)</span>
+                            </label>
+                            <label class="form-check">
+                                <input type="radio" class="form-check-input" name="cleanup-target" value="user_cache">
+                                <span class="form-check-label">用户缓存 (~/.cache)</span>
+                            </label>
+                            <label class="form-check">
+                                <input type="radio" class="form-check-input" name="cleanup-target" value="ros_logs">
+                                <span class="form-check-label">ROS 日志 (~/.ros/log)</span>
+                            </label>
+                            <label class="form-check custom-target">
+                                <input type="radio" class="form-check-input" name="cleanup-target" value="custom">
+                                <span class="form-check-label">自定义路径</span>
+                                <input type="text" class="form-control form-control-sm ms-2" name="custom-path" placeholder="/opt/data/tmp">
+                            </label>
+                        </div>
+                        <div class="actions">
+                            <button type="button" class="btn btn-outline-secondary btn-sm" data-action="cleanup-dry-run">
+                                <i class="bi bi-search"></i>
+                                预估空间
+                            </button>
+                            <button type="button" class="btn btn-danger btn-sm countdown-btn" data-action="cleanup-run" data-countdown="8">
+                                <i class="bi bi-exclamation-octagon"></i>
+                                执行清理
+                            </button>
+                        </div>
+                        <div class="hint-text" id="storage-cleanup-result">请选择任务，支持预估空间。</div>
+                    </form>
+                </div>
+
+                <div class="operations-section" id="storage-mount-ops">
+                    <h5>
+                        <i class="bi bi-plug"></i>
+                        挂载管理
+                    </h5>
+                    <form id="storage-mount-form" class="mount-form">
+                        <div class="row g-2">
+                            <div class="col-12">
+                                <label class="form-label">设备路径</label>
+                                <input type="text" class="form-control" name="device" placeholder="/dev/sdb1" required>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">挂载点</label>
+                                <input type="text" class="form-control" name="mountpoint" placeholder="/mnt/data">
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">挂载选项</label>
+                                <input type="text" class="form-control" name="options" placeholder="rw,noatime (可选)">
+                            </div>
+                            <div class="col-12 action-select">
+                                <div class="btn-group" role="group">
+                                    <input type="radio" class="btn-check" name="action" id="mount-action-mount" value="mount" autocomplete="off" checked>
+                                    <label class="btn btn-outline-primary" for="mount-action-mount">挂载</label>
+                                    <input type="radio" class="btn-check" name="action" id="mount-action-umount" value="umount" autocomplete="off">
+                                    <label class="btn btn-outline-secondary" for="mount-action-umount">卸载</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="actions">
+                            <button type="submit" class="btn btn-danger btn-sm countdown-btn" data-countdown="10">
+                                <i class="bi bi-play-circle"></i>
+                                执行操作
+                            </button>
+                        </div>
+                        <div class="hint-text" id="storage-mount-result">执行前请核对设备与挂载点。</div>
+                    </form>
+                </div>
+
+                <div class="operations-section" id="storage-partition-ops">
+                    <h5>
+                        <i class="bi bi-sliders"></i>
+                        分区与格式化
+                    </h5>
+                    <form id="storage-partition-form" class="partition-form">
+                        <div class="row g-2">
+                            <div class="col-12">
+                                <label class="form-label">设备 (整盘)</label>
+                                <input type="text" class="form-control" name="device" placeholder="/dev/sdc" required>
+                            </div>
+                            <div class="col-md-4 col-sm-12">
+                                <label class="form-label">操作</label>
+                                <select class="form-select" name="operation">
+                                    <option value="mkfs">格式化 (mkfs)</option>
+                                    <option value="wipefs">清除签名 (wipefs)</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4 col-sm-12">
+                                <label class="form-label">文件系统</label>
+                                <select class="form-select" name="filesystem">
+                                    <option value="ext4">ext4</option>
+                                    <option value="xfs">xfs</option>
+                                    <option value="btrfs">btrfs</option>
+                                    <option value="vfat">vfat</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4 col-sm-12">
+                                <label class="form-label">卷标 (可选)</label>
+                                <input type="text" class="form-control" name="label" maxlength="32">
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">额外参数 (可选)</label>
+                                <input type="text" class="form-control" name="extra" placeholder="-E lazy_itable_init=0">
+                            </div>
+                        </div>
+                        <div class="actions">
+                            <button type="submit" class="btn btn-danger btn-sm countdown-btn" data-countdown="12">
+                                <i class="bi bi-exclamation-octagon"></i>
+                                确认执行
+                            </button>
+                        </div>
+                        <div class="hint-text" id="storage-partition-result">
+                            ⚠️ 高风险操作：执行前请先卸载设备并确认目标。
+                        </div>
+                    </form>
+                </div>
+
+                <div class="operations-section" id="storage-smart-ops">
+                    <h5>
+                        <i class="bi bi-clipboard-pulse"></i>
+                        SMART 检测
+                    </h5>
+                    <form id="storage-smart-form" class="smart-form">
+                        <div class="row g-2 align-items-end">
+                            <div class="col-md-6 col-sm-12">
+                                <label class="form-label">设备</label>
+                                <input type="text" class="form-control" name="device" placeholder="/dev/sda" required>
+                            </div>
+                            <div class="col-md-4 col-sm-12">
+                                <label class="form-label">自检模式</label>
+                                <select class="form-select" name="mode">
+                                    <option value="short">短检 (约 2 分钟)</option>
+                                    <option value="long">长检 (耗时较久)</option>
+                                    <option value="conveyance">运输检测</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2 col-sm-12">
+                                <button type="submit" class="btn btn-primary btn-sm w-100 countdown-btn" data-countdown="6">
+                                    启动
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                    <div class="smart-report-actions">
+                        <button class="btn btn-outline-primary btn-sm" id="storage-smart-refresh">
+                            <i class="bi bi-arrow-clockwise"></i>
+                            获取报告
+                        </button>
+                    </div>
+                    <div class="smart-report" id="storage-smart-report">
+                        尚未获取 SMART 报告。
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-footer operations-footer">
+                <div class="operations-log-header">
+                    <i class="bi bi-clipboard-data"></i>
+                    操作日志
+                </div>
+                <div class="operations-log-list" id="storage-operations-log">
+                    <div class="log-empty">暂无记录</div>
+                </div>
+            </div>
+        </div>
+    </section>
 </div>

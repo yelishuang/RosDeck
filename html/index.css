@@ -609,9 +609,9 @@ body {
 }
 
 .content-area {
-    padding: 32px;
-    max-width: 1400px;
-    margin: 0 auto;
+    padding: 32px 48px 40px;
+    max-width: none;
+    width: 100%;
 }
 
 .welcome-card {

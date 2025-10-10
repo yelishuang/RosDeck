@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-RosDeck is an open-source LAN console for monitoring and managing development boards or edge devices running ROS 2. It provides lightweight server management capabilities (disk/network monitoring, file transfer, terminal) with plans to integrate LLM-based interactions with ROS resources.
+RosDeck is an open-source LAN console for monitoring and managing development boards or edge devices running ROS 2. It provides lightweight server management capabilities (disk/network monitoring, file transfer, terminal, logs) with plans to integrate LLM-based interactions with ROS resources.
 
 **Tech Stack:**
 - Backend: FastAPI (Python 3.11+) with psutil for system monitoring, PAM for authentication, optional rclpy for ROS integration
@@ -64,12 +64,19 @@ python -m http.server 8000
 - `ros.py` - ROS 2 metrics (nodes/topics/services count, stability) via ROSMonitor
 - `files.py` - File operations (list/upload/download/delete) with user path restrictions
 - `terminal.py` - WebSocket endpoint for terminal sessions with PTY support
+- `logs.py` - System logs streaming via journalctl, keyword filtering, export functionality
+- `network.py` - Network interface monitoring, traffic stats, connection details, IP configuration, diagnostics
+- `runtime.py` - Process and systemd service management with admin-only control operations
 
 **Services** (`services/`):
 - `system_monitor.py` - psutil wrapper with 2-second cache
 - `ros_monitor.py` - Background thread running rclpy node with 5s refresh; falls back to defaults if rclpy unavailable
 - `admin_privileged.py` - Subprocess wrapper for `/usr/local/libexec/rosdeck-control-helper`
 - `terminal_manager.py` - PTY session manager with command blacklist and admin-only command filtering
+- `journalctl_reader.py` - Systemd journal reader with streaming support and filtering
+- `network_monitor.py` - Network interface stats collection, traffic history buffer (180 points), connection parsing
+- `process_monitor.py` - Process listing via psutil with sorting, filtering, and kill operations
+- `service_manager.py` - Systemd service management (list, start, stop, restart, enable, disable)
 
 **Dependencies** (`deps/`):
 - `csrf.py` - In-memory CSRF token storage (needs Redis/DB for multi-instance)
@@ -80,8 +87,14 @@ python -m http.server 8000
 - CORS configured for `http://localhost:1221`
 - Logs all requests via middleware
 - Serves login page with injected CSRF token at `/auth/login.html`
+- Registers all route modules (auth, system, device, ros, files, terminal, logs, network, storage, runtime)
 
 ### Frontend Structure (`html/`)
+
+**Global Dependencies** (`html/index.html`):
+- jQuery 3.x, Bootstrap 5.x, Toastr loaded globally
+- **Chart.js** loaded globally for all modules requiring data visualization
+- xterm.js loaded on-demand by terminal module
 
 **Module System**:
 - Each module has `modules/{name}/index.html`, `main.js`, `style.css`
@@ -95,14 +108,31 @@ python -m http.server 8000
 - CSRF token managed via sessionStorage (`rosdeck_csrf_token`)
 - Admin mode verification/logout with toast notifications
 
-**Existing Modules**:
-- `overview` - Dashboard with system and ROS metrics polling
-- `file-transfer` - COMPLETE: Directory listing with breadcrumbs, upload (50MB limit), download, delete; normal users restricted to `~`, admins have full access with warnings for sensitive paths (`/etc`, `/bin`, `/sbin`, `/usr`, `/boot`, `/var`)
-- `terminal` - COMPLETE: Full xterm.js integration with WebSocket PTY, command blacklist (rm -rf /, mkfs, dd, fork bomb), admin-only commands (sudo, systemctl), 4 themes (dark/light/dracula/monokai), command history tracking, 30min session timeout
-- `network` - IN PROGRESS: Network interface monitoring and management (see Network Module Implementation Plan below)
+**Completed Modules**:
+
+- **`overview`** - COMPLETE: Dashboard with system and ROS metrics polling
+
+- **`file-transfer`** - COMPLETE: Directory listing with breadcrumbs, upload (50MB limit), download, delete; normal users restricted to `~`, admins have full access with warnings for sensitive paths (`/etc`, `/bin`, `/sbin`, `/usr`, `/boot`, `/var`)
+
+- **`terminal`** - COMPLETE: Full xterm.js integration with WebSocket PTY, command blacklist (rm -rf /, mkfs, dd, fork bomb), admin-only commands (sudo, systemctl), 4 themes (dark/light/dracula/monokai), command history tracking, 30min session timeout
+
+- **`logs`** - COMPLETE: Real-time journalctl log streaming via WebSocket, keyword filtering with highlighting, priority level filter (ERROR/WARNING/INFO/DEBUG), line limit selector (100/500/1000), auto-scroll toggle, export to text file, graceful error handling
+
+- **`network`** - COMPLETE: Three-column layout with:
+  - **Left panel**: Interface list (name, IP, MAC, status, TX/RX stats, errors, drops); admin can enable/disable interfaces
+  - **Center panel**: Real-time traffic chart (Chart.js) with upload/download speeds, time window selector (1/5/15 min), speed display
+  - **Right panel**: Active connections table (TCP/UDP, local/remote address:port, state, process); falls back to aggregate counts if permissions insufficient
+  - **Admin config panel** (collapsible): Static IP configuration (temporary/persistent via netplan), ping diagnostic tool
+  - Traffic history cached in-memory (5s intervals, max 180 points)
+
+- **`runtime`** - COMPLETE: Tab-based layout for process and service management:
+  - **Process Management Tab**: List all running processes with PID, name, user, CPU%, memory%, status, command line; sortable by CPU/memory/PID/name; searchable; 5-second auto-refresh; admin can kill processes
+  - **Service Management Tab**: List systemd services with name, load state, active state, sub-state; searchable and filterable by status; admin can start/stop/restart services and enable/disable autostart
+  - Admin mode detection via global `window.adminModeActive` variable and `rosdeck:admin-mode-change` event
+  - Performance optimized: removed per-service enabled check for faster loading
+
+**Partial/Stub Modules**:
 - `storage` - Partial: Has realtime panel, chart, and summary view components
-- `logs` - Stub: Basic structure only (parallel development with Network module)
-- `runtime` - Stub: Basic structure only
 - `ros/*` - Partial: ROS-specific pages (overview, communication, operations, ai-commander) with shared utilities
 
 ### Privileged Helpers (`privileged/`)
@@ -169,115 +199,64 @@ window.moduleCleanup = function() {
 - Frontend uses xterm.js with fit addon, theme persistence via localStorage
 - Input buffering up to 4KB when disconnected with overflow warning
 
-### Network Module Implementation Plan
+### Logs Architecture
+- **Backend**: `JournalctlReader` service wraps `journalctl` subprocess
+  - Streaming mode: `journalctl -f` with line-by-line parsing
+  - Query mode: Time-limited queries with `--since`, `--lines` parameters
+  - Priority filtering via `-p` flag (emerg=0, alert=1, crit=2, err=3, warning=4, notice=5, info=6, debug=7)
+  - Output format: JSON (`-o json`) for structured parsing
+- **API Routes**:
+  - `GET /api/logs/stream` - WebSocket endpoint for real-time log streaming
+  - `GET /api/logs/query` - Query historical logs with filters
+  - `GET /api/logs/export` - Download logs as text file
+- **Frontend**:
+  - WebSocket connection established in `moduleInit()`
+  - Keyword filtering implemented client-side with regex highlighting
+  - Auto-scroll with manual pause/resume capability
+  - Virtual scrolling for performance (displays last N lines)
+  - Export triggers server-side journalctl dump with same filters
 
-**Feature Scope** (based on requirements):
-1. **Interface Monitoring** (all users):
-   - List all network interfaces with basic info (name, IP, MAC, status) + traffic stats (TX/RX bytes, errors, drops)
-   - Real-time traffic graph: Upload/Download separate lines, 5s refresh aligned with system status polling
-   - Time window switcher: 1min (12 points) / 5min (60 points) / 15min (180 points)
+### Network Architecture
+- **Backend**: `NetworkMonitor` service with traffic history buffer
+  - Uses `psutil.net_if_addrs()` and `psutil.net_if_stats()` for interface data
+  - Maintains circular buffer (180 data points, 5s intervals = 15min max window)
+  - Calculates upload/download rates via delta between samples
+  - Connection parsing: Attempts detailed list via `psutil.net_connections()`, falls back to counts if PermissionError
+  - Admin operations via `subprocess.run()` with sudo: `ip link`, `ip addr`, `ip route`, `netplan apply`, `ping`
+- **API Routes**:
+  - `GET /api/network/interfaces` - List all interfaces with stats
+  - `GET /api/network/traffic-history?window={1min|5min|15min}` - Historical traffic data
+  - `GET /api/network/connections` - Active TCP/UDP connections (or aggregate counts)
+  - `POST /api/network/interface/toggle` - Enable/disable interface (admin, CSRF)
+  - `POST /api/network/interface/config` - Configure static IP (admin, CSRF, supports temporary/persistent modes)
+  - `POST /api/network/diagnostic/ping` - Run ping test (admin, CSRF)
+- **Frontend**:
+  - Three-column grid layout (`grid-template-columns: minmax(340px, 1fr) minmax(600px, 2fr) minmax(400px, 1.2fr)`)
+  - Traffic chart auto-sized to fill available height (`height: calc(100vh - 160px - 100px)`)
+  - Chart.js line chart with 2 datasets (upload red, download blue)
+  - Polling interval aligned with global system status update (5s)
+  - Admin panel shows/hides based on `rosdeck:admin-mode-change` event
+  - Dangerous operations (disable interface, change IP) require confirmation dialogs
 
-2. **Connection Details** (all users with graceful degradation):
-   - Detailed connection table: Local addr:port ↔ Remote addr:port, State (ESTABLISHED/TIME_WAIT/etc), PID/Program
-   - Fallback: If lacking permissions, show aggregated counts only
-   - Implementation: Prioritize `/proc/net/tcp` parsing over psutil for reliability in non-root scenarios
-
-3. **Network Configuration** (admin only):
-   - Interface control: Enable/Disable (via `ip link set {iface} up/down`)
-   - Static IP configuration: IP/netmask/gateway (temporary via `ip addr`/`ip route`, persistent via netplan)
-   - Mode toggle: Temporary (runtime only) vs Persistent (write to `/etc/netplan/*.yaml`)
-   - Network diagnostics: Ping (frontend form to target host), shows live output
-
-4. **Security**:
-   - Dangerous operations require confirmation dialog: Disabling all active interfaces, changing IP of current management interface
-   - Admin session validation for all configuration endpoints
-   - CSRF protection on all POST/PUT/DELETE operations
-
-**Architecture**:
-
-**Backend** (`backend/app/`):
-```
-routes/network.py           [NEW] - Network management API
-  GET  /api/network/interfaces        - List interfaces with stats
-  GET  /api/network/traffic-history   - Historical data for charts (cached in-memory)
-  GET  /api/network/connections       - Active TCP/UDP connections
-  POST /api/network/interface/toggle  - Enable/disable interface (admin + CSRF)
-  POST /api/network/interface/config  - Set static IP (admin + CSRF)
-  POST /api/network/diagnostic/ping   - Run ping test (admin + CSRF)
-
-services/network_monitor.py [NEW] - Network data collection service
-  class NetworkMonitor:
-    - get_interfaces() -> List[InterfaceInfo]  # Uses psutil.net_if_addrs/stats
-    - get_traffic_history(window: str) -> Dict  # Rolling buffer, 5s sampling
-    - get_connections() -> List[ConnectionInfo]  # Parses /proc/net/{tcp,udp}
-    - execute_interface_toggle(iface: str, enable: bool) -> bool
-    - execute_ip_config(iface: str, ip: str, netmask: str, gateway: str, persistent: bool) -> bool
-    - execute_ping(target: str) -> str  # Runs ping -c 4, returns output
-```
-
-**Frontend** (`html/modules/network/`):
-```
-index.html    [NEW] - Three-column layout:
-  <div class="network-container">
-    <aside class="interfaces-panel">        <!-- Left: Interface list -->
-    <main class="traffic-panel">            <!-- Center: Real-time chart -->
-    <aside class="connections-panel">       <!-- Right: Connection table -->
-    <section class="config-panel">          <!-- Admin-only config form (collapsible) -->
-  </div>
-
-main.js       [NEW] - Module logic (~800 lines estimated)
-  - Polling: 5s interval aligned with system status (reuses existing timer)
-  - Chart: Chart.js line chart, two datasets (upload/download), time-sliding window
-  - Interface actions: Click interface → highlight in chart, admin toggle button
-  - Config form: IP/netmask validation, mode toggle (temp/persistent), submit with CSRF
-  - Event listeners: Admin mode change → show/hide config panel
-
-style.css     [NEW] - Responsive three-column grid, interface card styling
-```
-
-**No New Privileged Helpers**: All network operations use `subprocess.run()` with `sudo` (requires admin session validation). Commands whitelist:
-- `ip link set {iface} up/down`
-- `ip addr add/del`
-- `ip route add/del`
-- `netplan apply` (after file write)
-- `ping -c 4 {target}`
-
-**Data Flow**:
-1. **Traffic Graph**:
-   - Backend: `NetworkMonitor` maintains circular buffer (max 180 points = 15min @5s)
-   - Frontend polls `/api/network/traffic-history?window=5min` every 5s
-   - Chart.js updates with new data point, shifts old data
-
-2. **Interface Toggle**:
-   - User clicks "Disable eth0" → Confirmation dialog (warns if management interface)
-   - POST `/api/network/interface/toggle` with CSRF token
-   - Backend validates admin session, runs `sudo ip link set eth0 down`
-   - Frontend refreshes interface list
-
-3. **Static IP Config**:
-   - Admin fills form: eth0, 192.168.1.100/24, gateway 192.168.1.1, mode: Persistent
-   - POST `/api/network/interface/config`
-   - Backend:
-     - Runs `ip addr add 192.168.1.100/24 dev eth0`
-     - Writes to `/etc/netplan/99-rosdeck-eth0.yaml`
-     - Runs `sudo netplan apply`
-   - Shows success toast with warning about connection loss if changing current interface
-
-**Modified Files**:
-```
-backend/app/routes/network.py               [CREATE]
-backend/app/services/network_monitor.py     [CREATE]
-backend/app/main.py                         [UPDATE] - Add network router
-html/modules/network/index.html             [CREATE]
-html/modules/network/main.js                [CREATE]
-html/modules/network/style.css              [CREATE]
-CLAUDE.md                                   [UPDATE] - This section
-```
-
-**No modifications to**:
-- `system_monitor.py` - Network module uses dedicated `network_monitor.py`
-- Nginx config - Uses standard HTTP polling, no WebSocket needed
-- Privileged helpers - Uses subprocess with sudo commands
+### Runtime Architecture
+- **Backend**: Process and service management via psutil and systemctl
+  - `ProcessMonitor`: Uses `psutil.process_iter()` with two-pass approach for accurate CPU% calculation
+  - `ServiceManager`: Parses `systemctl list-units` output, optimized by removing per-service enabled check
+  - Process kill operations check for PID 1 (init) and self-termination prevention
+  - All service control operations (start/stop/restart/enable/disable) use `sudo systemctl`
+- **API Routes**:
+  - `GET /api/runtime/processes?sort_by={cpu|memory|pid|name}` - List processes (all users, read-only)
+  - `POST /api/runtime/processes/kill` - Terminate process by PID (admin + CSRF)
+  - `GET /api/runtime/services` - List systemd services (all users, read-only)
+  - `POST /api/runtime/services/action` - Control service (admin + CSRF, actions: start/stop/restart/enable/disable)
+  - `GET /api/runtime/services/{name}/status` - Get detailed service status (all users)
+- **Frontend**:
+  - Bootstrap 5 Tab layout with two panels (Processes / Services)
+  - Process table: sortable, searchable, 5-second auto-refresh, admin-only kill button per process
+  - Service table: searchable, filterable by active state, admin-only action buttons (5 buttons per service)
+  - Admin mode detection via global `window.adminModeActive` variable, synced via `rosdeck:admin-mode-change` event on window
+  - Module stores local `isAdminMode` state initialized from global on `moduleInit()`, updated via event handler
+  - **CRITICAL CSS FIX**: `.tab-pane` must not have `display: flex` without `.show` class to allow Bootstrap tab switching
 
 ## Important Constraints
 
@@ -289,18 +268,24 @@ CLAUDE.md                                   [UPDATE] - This section
 - Consider Redis/DB for production multi-instance deployments
 - Terminal command blacklist uses regex patterns to prevent destructive operations
 - File operations validate paths to prevent directory traversal attacks
+- Network operations validate interface names and IP formats before execution
+- Logs module uses read-only journalctl operations (no log deletion/modification)
 
 ### Frontend Conventions
 - 4-space indentation, camelCase functions
 - Double quotes for strings
 - No emojis in UI unless explicitly requested
 - Module names map to paths: `'file-transfer'` → `modules/file-transfer/`
+- All modules must implement `moduleInit()` and `moduleCleanup()`
+- Use Chart.js for data visualization (already loaded globally in `index.html`)
 
 ### Backend Conventions
 - Follow PEP 8 / Black style
 - Use type hints where helpful
 - Log at appropriate levels (INFO for normal ops, WARNING for degraded state, ERROR for failures)
 - Routes return `{"success": bool, "message": str, ...}` for consistency
+- Use `subprocess.run()` with `capture_output=True, text=True, timeout=30` for external commands
+- Always validate user input before passing to shell commands
 
 ### File Operations
 - Normal users restricted to their home directory
@@ -346,11 +331,19 @@ Currently no automated tests exist. When adding features:
 - PTY spawn fails: Verify ptyprocess dependency and user's shell path
 - Font rendering issues: Ensure xterm.js assets loaded from `libs/xterm/`
 
+**Logs module issues:**
+- WebSocket connection fails: Check if journalctl is available and accessible
+- No logs displayed: Verify systemd journal exists at `/var/log/journal/` or `/run/log/journal/`
+- Permission errors: Normal users can only read their own logs; system logs require admin mode
+- Export fails: Check backend has write permissions to temporary directory
+
 **Network module issues:**
-- Interface list empty: Check if user has permission to read `/sys/class/net/`
-- Connection details unavailable: Normal for non-root users, should show aggregate counts
-- IP config fails: Verify netplan is installed and user is in admin mode
-- Traffic graph not updating: Check if 5s polling interval is active in browser console
+- Interface list empty: Check if user has permission to read network interface data via psutil
+- Connection details show "Permission denied": Normal for non-root users, aggregate counts are displayed instead
+- Traffic chart not updating: Verify 5s polling interval is active in browser console
+- IP config fails: Ensure netplan is installed (`apt install netplan.io`) and admin mode is active
+- Interface toggle fails: Verify admin session and check for existing network manager conflicts (NetworkManager, systemd-networkd)
+- Chart.js error: Ensure Chart.js is loaded in main `index.html` before module scripts
 
 **ROS metrics show zeros:**
 - Verify `rclpy` is importable in backend venv: `python -c "import rclpy"`
@@ -358,12 +351,20 @@ Currently no automated tests exist. When adding features:
 - Look for ROSMonitor warnings in backend logs
 - ROSMonitor gracefully degrades - zeros indicate rclpy unavailable or no nodes running
 
+**Runtime module issues:**
+- Admin buttons not appearing: Check browser console for admin mode initialization logs
+- Verify `window.adminModeActive` is defined in global scope (set by index.js)
+- Ensure `rosdeck:admin-mode-change` event is being dispatched on window object
+- Check that module is listening to window events, not document events
+- Service loading slow: Check if per-service enabled check was re-added (should be disabled for performance)
+- Processes not refreshing: Verify 5s interval is active and tab has `.active` class
+
 ## Dependencies
 
 **Backend** (`backend/requirements.txt`):
 - FastAPI 0.104.1 + Uvicorn 0.24.0 (ASGI server)
-- WebSockets 12.0 (for terminal)
-- psutil 5.9.6 (system monitoring)
+- WebSockets 12.0 (for terminal and logs streaming)
+- psutil 5.9.6 (system monitoring, network stats)
 - python-pam 2.0.2 (authentication)
 - python-multipart 0.0.20 (file uploads)
 - ptyprocess 0.7.0 (terminal PTY)
@@ -372,7 +373,7 @@ Currently no automated tests exist. When adding features:
 **Frontend** (`html/libs/`):
 - jQuery 3.x (DOM manipulation)
 - Bootstrap 5.x (UI framework)
-- Chart.js (data visualization)
+- Chart.js 4.x (data visualization, loaded globally)
 - Toastr (notifications)
 - xterm.js (terminal emulator)
 
@@ -380,14 +381,44 @@ Currently no automated tests exist. When adding features:
 - Nginx (reverse proxy and static file serving)
 - GCC + libpam-dev (for compiling privileged helpers)
 - Python 3.11+ (backend runtime)
+- systemd with journalctl (for logs module)
+- iproute2 (ip command for network configuration)
+- netplan (optional, for persistent network config)
+- iputils-ping (for network diagnostics)
 - Optional: ROS 2 with rclpy (for ROS monitoring)
 
 ## Future Directions
 
 See `AGENTS.md` section 13 for roadmap. Key themes:
-1. Complete system monitoring modules (logs, network realtime bandwidth, storage detailed views)
-2. Network management (Wi-Fi/Ethernet switching, firewall configuration)
+1. Complete storage module (detailed disk usage breakdown, SMART status, cleanup utilities)
+2. Enhanced network management (Wi-Fi configuration, firewall rules via ufw/iptables)
 3. ROS graph visualization and node lifecycle management
 4. LLM integration prototype for ROS interaction (`modules/ros/ai-commander`)
 5. Automated testing (pytest for backend, manual checklists for frontend)
 6. Production deployment guide (systemd service, Redis for session storage, SSL/TLS)
+7. Log analysis features (pattern detection, error aggregation, export to standard formats)
+8. Network traffic analysis (bandwidth usage per process, connection history)
+
+## Recent Changes (v0.4.0)
+
+**Added:**
+- Runtime module (process and service management) with dual-tab interface
+  - Process monitoring: view all processes, sort by CPU/memory/PID/name, search, auto-refresh every 5s
+  - Service management: list systemd services, filter by status, admin can control services
+  - Admin operations: kill processes, start/stop/restart services, enable/disable service autostart
+  - Performance optimization: removed slow per-service enabled check, reduced load time from 10s+ to <2s
+- Backend services: `process_monitor.py`, `service_manager.py`
+- Backend route: `/api/runtime/*` with admin + CSRF protection
+
+**Fixed:**
+- Runtime module Tab switching: CSS `.tab-pane` forced `display: flex` breaking Bootstrap tab visibility
+- JavaScript template literal escaping in main.js (was `\`` instead of backticks)
+- Service table column count (removed "enabled" column, now 5 columns instead of 6)
+- Admin mode detection in runtime module: Changed from cookie reading (which returned empty string) to using global `window.adminModeActive` variable pattern like other modules
+
+**Known Limitations:**
+- CSRF tokens and admin sessions stored in-memory (lost on restart)
+- Network traffic history limited to 15 minutes (180 data points)
+- No log persistence/archiving (relies on systemd journal retention)
+- Static IP configuration requires netplan (Ubuntu/Debian specific)
+- Connection details require elevated permissions (falls back to counts)

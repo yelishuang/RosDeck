@@ -80,7 +80,7 @@
 }
 
 .logs-list {
-    max-height: calc(100% - 20px);
+    max-height: 720px;
     overflow-y: auto;
     padding: 24px;
     display: flex;

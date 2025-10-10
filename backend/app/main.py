@@ -16,6 +16,8 @@ from app.routes import files
 from app.routes import terminal
 from app.routes import network
 from app.routes import logs
+from app.routes import storage
+from app.routes import runtime
 
 # 导入依赖
 from app.deps.csrf import csrf_protection
@@ -59,6 +61,8 @@ app.include_router(files.router)
 app.include_router(terminal.router)
 app.include_router(network.router)
 app.include_router(logs.router)
+app.include_router(storage.router)
+app.include_router(runtime.router)
 
 # 埋点接口
 @app.post("/api/metrics")

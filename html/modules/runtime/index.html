@@ -1,8 +1,122 @@
-<div class="module-placeholder">
-    <div class="placeholder-icon">
-        <i class="bi bi-gear"></i>
+<div class="runtime-container">
+    <!-- Tab Navigation -->
+    <ul class="nav nav-tabs runtime-tabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="processes-tab" data-bs-toggle="tab"
+                    data-bs-target="#processes-panel" type="button" role="tab">
+                <i class="bi bi-cpu"></i> 进程管理
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="services-tab" data-bs-toggle="tab"
+                    data-bs-target="#services-panel" type="button" role="tab">
+                <i class="bi bi-gear-fill"></i> 服务管理
+            </button>
+        </li>
+    </ul>
+
+    <!-- Tab Content -->
+    <div class="tab-content runtime-tab-content">
+
+        <!-- Processes Panel -->
+        <div class="tab-pane fade show active" id="processes-panel" role="tabpanel">
+
+            <!-- Toolbar -->
+            <div class="runtime-toolbar">
+                <div class="toolbar-left">
+                    <input type="text" class="form-control form-control-sm" id="process-search"
+                           placeholder="搜索进程（名称、PID、用户）...">
+                </div>
+                <div class="toolbar-right">
+                    <select class="form-select form-select-sm" id="process-sort">
+                        <option value="cpu">按 CPU 降序</option>
+                        <option value="memory">按内存降序</option>
+                        <option value="pid">按 PID 排序</option>
+                        <option value="name">按名称排序</option>
+                    </select>
+                    <button class="btn btn-sm btn-outline-primary" id="refresh-processes">
+                        <i class="bi bi-arrow-clockwise"></i> 刷新
+                    </button>
+                </div>
+            </div>
+
+            <!-- Process Table -->
+            <div class="runtime-table-container">
+                <table class="table table-hover runtime-table" id="process-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 80px;">PID</th>
+                            <th style="width: 200px;">进程名</th>
+                            <th style="width: 120px;">用户</th>
+                            <th style="width: 100px;">CPU %</th>
+                            <th style="width: 100px;">内存 %</th>
+                            <th style="width: 100px;">状态</th>
+                            <th>命令行</th>
+                            <th style="width: 100px;" class="admin-only">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="process-tbody">
+                        <tr>
+                            <td colspan="8" class="text-center text-muted">加载中...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="runtime-footer">
+                <span id="process-count">总计: 0 个进程</span>
+                <span id="process-auto-refresh" class="ms-3">
+                    <i class="bi bi-arrow-repeat"></i> 自动刷新: 5秒
+                </span>
+            </div>
+        </div>
+
+        <!-- Services Panel -->
+        <div class="tab-pane fade" id="services-panel" role="tabpanel">
+
+            <!-- Toolbar -->
+            <div class="runtime-toolbar">
+                <div class="toolbar-left">
+                    <input type="text" class="form-control form-control-sm" id="service-search"
+                           placeholder="搜索服务名称...">
+                </div>
+                <div class="toolbar-right">
+                    <select class="form-select form-select-sm" id="service-filter">
+                        <option value="all">全部服务</option>
+                        <option value="active">运行中</option>
+                        <option value="inactive">已停止</option>
+                        <option value="failed">失败</option>
+                    </select>
+                    <button class="btn btn-sm btn-outline-primary" id="refresh-services">
+                        <i class="bi bi-arrow-clockwise"></i> 刷新
+                    </button>
+                </div>
+            </div>
+
+            <!-- Service Table -->
+            <div class="runtime-table-container">
+                <table class="table table-hover runtime-table" id="service-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 250px;">服务名</th>
+                            <th style="width: 100px;">加载状态</th>
+                            <th style="width: 150px;">运行状态</th>
+                            <th style="width: 120px;">子状态</th>
+                            <th class="admin-only">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="service-tbody">
+                        <tr>
+                            <td colspan="5" class="text-center text-muted">加载中...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="runtime-footer">
+                <span id="service-count">总计: 0 个服务</span>
+            </div>
+        </div>
+
     </div>
-    <h2 class="placeholder-title">运行中心</h2>
-    <p class="placeholder-desc">系统进程与服务管理</p>
-    <div class="placeholder-status">开发中...</div>
 </div>
