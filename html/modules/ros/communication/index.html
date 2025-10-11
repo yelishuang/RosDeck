@@ -1,8 +1,338 @@
-<div class="module-placeholder">
-    <div class="placeholder-icon">
-        <i class="bi bi-broadcast"></i>
+<!-- ROS 通信监控模块 -->
+<div class="ros-comm-module">
+    <!-- 顶部标签页导航 -->
+    <ul class="comm-tabs" id="comm-tabs">
+        <li class="comm-tab active" data-tab="topic-monitor">
+            <i class="bi bi-broadcast"></i>
+            <span>话题监控</span>
+        </li>
+        <li class="comm-tab" data-tab="message-analysis">
+            <i class="bi bi-bar-chart-line"></i>
+            <span>消息分析</span>
+        </li>
+        <li class="comm-tab" data-tab="service-call">
+            <i class="bi bi-gear-wide-connected"></i>
+            <span>服务调用</span>
+        </li>
+        <li class="comm-tab" data-tab="message-types">
+            <i class="bi bi-file-code"></i>
+            <span>消息类型</span>
+        </li>
+    </ul>
+
+    <!-- 标签页内容容器 -->
+    <div class="comm-content">
+        <!-- ========== 1. 话题监控面板 ========== -->
+        <div class="comm-panel active" id="panel-topic-monitor">
+            <div class="monitor-layout">
+                <!-- 左侧：话题列表 -->
+                <aside class="topic-sidebar">
+                    <div class="sidebar-header">
+                        <h3 class="sidebar-title">话题列表</h3>
+                        <div class="sidebar-actions">
+                            <button class="btn-icon" id="btn-refresh-topics" title="刷新">
+                                <i class="bi bi-arrow-clockwise"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="sidebar-search">
+                        <i class="bi bi-search"></i>
+                        <input type="text" id="topic-search" placeholder="搜索话题...">
+                    </div>
+                    <div class="sidebar-body" id="topics-list">
+                        <div class="loading-state">
+                            <i class="bi bi-arrow-clockwise spinner"></i>
+                            <span>加载中...</span>
+                        </div>
+                    </div>
+                </aside>
+
+                <!-- 右侧：多话题监控区 -->
+                <main class="monitor-main">
+                    <div class="monitor-header">
+                        <h3 class="monitor-title">实时消息监控</h3>
+                        <div class="monitor-actions">
+                            <select id="view-mode-select" class="view-mode-select">
+                                <option value="single">单话题</option>
+                                <option value="grid-2">2分屏</option>
+                                <option value="grid-4">4分屏</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="monitor-grid" id="monitor-grid" data-mode="single">
+                        <!-- 监控窗口将动态生成 -->
+                        <div class="monitor-placeholder">
+                            <i class="bi bi-arrow-left-circle"></i>
+                            <p>从左侧选择话题开始监控</p>
+                        </div>
+                    </div>
+                </main>
+            </div>
+        </div>
+
+        <!-- ========== 2. 消息分析面板 ========== -->
+        <div class="comm-panel" id="panel-message-analysis">
+            <div class="analysis-layout">
+                <!-- 分析配置区 -->
+                <div class="analysis-config">
+                    <div class="config-section">
+                        <label class="config-label">选择话题</label>
+                        <select id="analysis-topic-select" class="config-select">
+                            <option value="">选择要分析的话题...</option>
+                        </select>
+                    </div>
+                    <div class="config-section">
+                        <label class="config-label">时间范围</label>
+                        <select id="analysis-timerange" class="config-select">
+                            <option value="1m">最近 1 分钟</option>
+                            <option value="5m" selected>最近 5 分钟</option>
+                            <option value="15m">最近 15 分钟</option>
+                            <option value="30m">最近 30 分钟</option>
+                        </select>
+                    </div>
+                    <div class="config-section">
+                        <button class="btn-analyze" id="btn-start-analysis">
+                            <i class="bi bi-play-fill"></i>
+                            开始分析
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 分析结果区 -->
+                <div class="analysis-results">
+                    <!-- 统计卡片 -->
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-icon" style="background: #e0f2fe;">
+                                <i class="bi bi-speedometer2" style="color: #0284c7;"></i>
+                            </div>
+                            <div class="stat-content">
+                                <div class="stat-label">平均频率</div>
+                                <div class="stat-value" id="stat-avg-freq">- Hz</div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon" style="background: #dcfce7;">
+                                <i class="bi bi-file-earmark-bar-graph" style="color: #16a34a;"></i>
+                            </div>
+                            <div class="stat-content">
+                                <div class="stat-label">平均大小</div>
+                                <div class="stat-value" id="stat-avg-size">- B</div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon" style="background: #fef3c7;">
+                                <i class="bi bi-hash" style="color: #ca8a04;"></i>
+                            </div>
+                            <div class="stat-content">
+                                <div class="stat-label">消息总数</div>
+                                <div class="stat-value" id="stat-msg-count">-</div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon" style="background: #fce7f3;">
+                                <i class="bi bi-activity" style="color: #db2777;"></i>
+                            </div>
+                            <div class="stat-content">
+                                <div class="stat-label">最大频率</div>
+                                <div class="stat-value" id="stat-max-freq">- Hz</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 频率趋势图 -->
+                    <div class="chart-section">
+                        <h4 class="chart-title">消息频率趋势</h4>
+                        <div class="chart-container">
+                            <canvas id="freq-chart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- 消息大小分布图 -->
+                    <div class="chart-section">
+                        <h4 class="chart-title">消息大小分布</h4>
+                        <div class="chart-container chart-container-small">
+                            <canvas id="size-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== 3. 服务调用面板 ========== -->
+        <div class="comm-panel" id="panel-service-call">
+            <div class="service-layout">
+                <!-- 左侧：服务列表 -->
+                <aside class="service-sidebar">
+                    <div class="sidebar-header">
+                        <h3 class="sidebar-title">服务列表</h3>
+                        <button class="btn-icon" id="btn-refresh-services" title="刷新">
+                            <i class="bi bi-arrow-clockwise"></i>
+                        </button>
+                    </div>
+                    <div class="sidebar-search">
+                        <i class="bi bi-search"></i>
+                        <input type="text" id="service-search" placeholder="搜索服务...">
+                    </div>
+                    <div class="sidebar-body" id="services-list">
+                        <div class="loading-state">
+                            <i class="bi bi-arrow-clockwise spinner"></i>
+                            <span>加载中...</span>
+                        </div>
+                    </div>
+                </aside>
+
+                <!-- 右侧：服务调用区 -->
+                <main class="service-main">
+                    <div class="service-call-container">
+                        <!-- 服务信息 -->
+                        <div class="service-info" id="service-info" style="display: none;">
+                            <h3 class="service-name" id="selected-service-name">-</h3>
+                            <div class="service-meta">
+                                <span class="service-type" id="selected-service-type">-</span>
+                            </div>
+                        </div>
+
+                        <!-- 请求参数编辑器 -->
+                        <div class="request-editor" id="request-editor-section" style="display: none;">
+                            <div class="editor-header">
+                                <h4 class="editor-title">请求参数 (JSON)</h4>
+                                <div class="editor-actions">
+                                    <button class="btn-editor-action" id="btn-format-request">
+                                        <i class="bi bi-braces"></i>
+                                        格式化
+                                    </button>
+                                    <button class="btn-editor-action" id="btn-clear-request">
+                                        <i class="bi bi-x-circle"></i>
+                                        清空
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="editor-body">
+                                <textarea id="request-params" class="json-editor" placeholder="输入 JSON 格式的请求参数...&#10;例如:&#10;{&#10;  &quot;data&quot;: &quot;hello&quot;&#10;}"></textarea>
+                            </div>
+                            <div class="editor-footer">
+                                <button class="btn-call-service" id="btn-call-service">
+                                    <i class="bi bi-send-fill"></i>
+                                    调用服务
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- 响应结果 -->
+                        <div class="response-viewer" id="response-viewer" style="display: none;">
+                            <div class="viewer-header">
+                                <h4 class="viewer-title">响应结果</h4>
+                                <div class="response-status" id="response-status"></div>
+                            </div>
+                            <div class="viewer-body">
+                                <pre id="response-output" class="json-output"></pre>
+                            </div>
+                        </div>
+
+                        <!-- 调用历史 -->
+                        <div class="call-history" id="call-history-section" style="display: none;">
+                            <h4 class="history-title">
+                                <i class="bi bi-clock-history"></i>
+                                调用历史
+                            </h4>
+                            <div class="history-list" id="call-history-list"></div>
+                        </div>
+
+                        <!-- 占位符 -->
+                        <div class="service-placeholder" id="service-placeholder">
+                            <i class="bi bi-arrow-left-circle"></i>
+                            <p>从左侧选择服务开始调用</p>
+                        </div>
+                    </div>
+                </main>
+            </div>
+        </div>
+
+        <!-- ========== 4. 消息类型面板 ========== -->
+        <div class="comm-panel" id="panel-message-types">
+            <div class="types-layout">
+                <!-- 左侧：类型列表 -->
+                <aside class="types-sidebar">
+                    <div class="sidebar-header">
+                        <h3 class="sidebar-title">消息类型</h3>
+                        <button class="btn-icon" id="btn-refresh-types" title="刷新">
+                            <i class="bi bi-arrow-clockwise"></i>
+                        </button>
+                    </div>
+                    <div class="sidebar-search">
+                        <i class="bi bi-search"></i>
+                        <input type="text" id="types-search" placeholder="搜索类型...">
+                    </div>
+                    <div class="types-filter">
+                        <button class="filter-btn active" data-filter="all">
+                            全部 <span class="filter-count" id="count-all">0</span>
+                        </button>
+                        <button class="filter-btn" data-filter="custom">
+                            自定义 <span class="filter-count" id="count-custom">0</span>
+                        </button>
+                        <button class="filter-btn" data-filter="standard">
+                            标准库 <span class="filter-count" id="count-standard">0</span>
+                        </button>
+                    </div>
+                    <div class="sidebar-body" id="types-list">
+                        <div class="loading-state">
+                            <i class="bi bi-arrow-clockwise spinner"></i>
+                            <span>加载中...</span>
+                        </div>
+                    </div>
+                </aside>
+
+                <!-- 右侧：类型定义查看器 -->
+                <main class="types-main">
+                    <div class="type-viewer-container">
+                        <!-- 类型信息 -->
+                        <div class="type-info" id="type-info" style="display: none;">
+                            <h3 class="type-name" id="selected-type-name">-</h3>
+                            <div class="type-meta">
+                                <span class="type-package" id="selected-type-package">-</span>
+                                <span class="type-usage" id="selected-type-usage">使用次数: -</span>
+                            </div>
+                        </div>
+
+                        <!-- 类型定义 -->
+                        <div class="type-definition" id="type-definition-section" style="display: none;">
+                            <div class="definition-header">
+                                <h4 class="definition-title">消息定义</h4>
+                                <button class="btn-copy" id="btn-copy-definition" title="复制">
+                                    <i class="bi bi-clipboard"></i>
+                                </button>
+                            </div>
+                            <div class="definition-body">
+                                <pre id="type-definition" class="definition-code"></pre>
+                            </div>
+                        </div>
+
+                        <!-- 字段列表 -->
+                        <div class="type-fields" id="type-fields-section" style="display: none;">
+                            <h4 class="fields-title">字段说明</h4>
+                            <div class="fields-table-wrapper">
+                                <table class="fields-table" id="fields-table">
+                                    <thead>
+                                        <tr>
+                                            <th>字段名</th>
+                                            <th>类型</th>
+                                            <th>说明</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- 占位符 -->
+                        <div class="types-placeholder" id="types-placeholder">
+                            <i class="bi bi-arrow-left-circle"></i>
+                            <p>从左侧选择消息类型查看定义</p>
+                        </div>
+                    </div>
+                </main>
+            </div>
+        </div>
     </div>
-    <h2 class="placeholder-title">通信监控</h2>
-    <p class="placeholder-desc">ROS 话题与消息监控</p>
-    <div class="placeholder-status">开发中...</div>
 </div>

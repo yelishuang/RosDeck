@@ -1,0 +1,319 @@
+/* ROS 概览模块样式 */
+.ros-overview-container {
+    padding: 20px;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+/* 系统信息卡片 */
+.ros-system-info {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 12px;
+    padding: 20px;
+    color: white;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+}
+
+.info-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.info-header h3 {
+    margin: 0;
+    font-size: 1.2rem;
+    font-weight: 600;
+}
+
+.connection-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.9rem;
+}
+
+.status-indicator {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #6c757d;
+    animation: pulse 2s ease-in-out infinite;
+}
+
+.status-indicator.connected {
+    background: #28a745;
+}
+
+.status-indicator.disconnected {
+    background: #dc3545;
+    animation: none;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+.info-content {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+}
+
+.info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.info-label {
+    font-size: 0.85rem;
+    opacity: 0.9;
+}
+
+.info-value {
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+/* 标签页 */
+.nav-tabs {
+    border-bottom: 2px solid #dee2e6;
+}
+
+.nav-tabs .nav-link {
+    color: #6c757d;
+    border: none;
+    padding: 12px 20px;
+    font-weight: 500;
+    transition: all 0.3s;
+}
+
+.nav-tabs .nav-link:hover {
+    color: #495057;
+    border-color: transparent;
+}
+
+.nav-tabs .nav-link.active {
+    color: #667eea;
+    border-bottom: 3px solid #667eea;
+    background: transparent;
+}
+
+.nav-tabs .nav-link i {
+    margin-right: 5px;
+}
+
+/* 面板 */
+.panel-header {
+    padding: 15px 0;
+}
+
+.search-input {
+    max-width: 400px;
+    border-radius: 8px;
+}
+
+.entity-list {
+    min-height: 400px;
+    max-height: 600px;
+    overflow-y: auto;
+}
+
+/* 空状态 */
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    color: #6c757d;
+}
+
+.empty-state i {
+    font-size: 3rem;
+    margin-bottom: 15px;
+    opacity: 0.5;
+}
+
+.empty-state p {
+    font-size: 1.1rem;
+    margin: 0;
+}
+
+/* 实体卡片 */
+.entity-card {
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 10px;
+    transition: all 0.2s;
+}
+
+.entity-card:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    border-color: #667eea;
+}
+
+.entity-card.bookmarked {
+    border-left: 4px solid #ffc107;
+    background: #fffbf0;
+}
+
+.entity-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.entity-name {
+    font-weight: 600;
+    font-size: 1rem;
+    color: #333;
+    word-break: break-all;
+}
+
+.entity-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.btn-icon {
+    background: none;
+    border: none;
+    color: #6c757d;
+    cursor: pointer;
+    padding: 5px;
+    transition: all 0.2s;
+}
+
+.btn-icon:hover {
+    color: #495057;
+    transform: scale(1.1);
+}
+
+.btn-icon.bookmarked {
+    color: #ffc107;
+}
+
+.entity-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 10px;
+    font-size: 0.85rem;
+    color: #6c757d;
+}
+
+.meta-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.meta-item i {
+    font-size: 0.9rem;
+}
+
+/* 话题详情 */
+.topic-details {
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid #e0e0e0;
+}
+
+.topic-details-loading {
+    text-align: center;
+    padding: 20px;
+    color: #6c757d;
+}
+
+.topic-participants {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+
+.participants-group h6 {
+    font-size: 0.85rem;
+    color: #6c757d;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    font-weight: 600;
+}
+
+.participants-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.participants-list li {
+    padding: 5px 10px;
+    background: #f8f9fa;
+    border-radius: 4px;
+    margin-bottom: 5px;
+    font-size: 0.9rem;
+}
+
+.participants-list li i {
+    margin-right: 5px;
+    color: #667eea;
+}
+
+/* Badge样式 */
+.badge {
+    font-size: 0.75rem;
+    padding: 4px 8px;
+    border-radius: 12px;
+}
+
+/* 新增/删除动画 */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes fadeOut {
+    from {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+}
+
+.entity-card.new {
+    animation: fadeIn 0.3s ease-out;
+}
+
+.entity-card.removing {
+    animation: fadeOut 0.3s ease-out;
+}
+
+/* 响应式 */
+@media (max-width: 768px) {
+    .info-content {
+        grid-template-columns: 1fr;
+    }
+
+    .topic-participants {
+        grid-template-columns: 1fr;
+    }
+
+    .search-input {
+        max-width: 100%;
+    }
+}

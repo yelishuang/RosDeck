@@ -1,8 +1,98 @@
-<div class="module-placeholder">
-    <div class="placeholder-icon">
-        <i class="bi bi-diagram-3"></i>
+<!-- ROS 概览模块 -->
+<div class="ros-overview-container">
+    <!-- 系统信息卡片 -->
+    <div class="ros-system-info">
+        <div class="info-header">
+            <h3>
+                <i class="bi bi-info-circle"></i>
+                ROS 系统信息
+            </h3>
+            <div class="connection-status">
+                <span class="status-indicator" id="ws-status-indicator"></span>
+                <span class="status-text" id="ws-status-text">连接中...</span>
+            </div>
+        </div>
+        <div class="info-content">
+            <div class="info-item">
+                <span class="info-label">ROS 版本:</span>
+                <span class="info-value" id="ros-version">-</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">DDS 实现:</span>
+                <span class="info-value" id="dds-impl">-</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Domain ID:</span>
+                <span class="info-value" id="domain-id">-</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">最后更新:</span>
+                <span class="info-value" id="last-update">-</span>
+            </div>
+        </div>
     </div>
-    <h2 class="placeholder-title">ROS 概览</h2>
-    <p class="placeholder-desc">ROS 系统整体状态监控</p>
-    <div class="placeholder-status">开发中...</div>
+
+    <!-- 标签页导航 -->
+    <ul class="nav nav-tabs mt-3" id="rosOverviewTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="nodes-tab" data-bs-toggle="tab" data-bs-target="#nodes-panel" type="button" role="tab">
+                <i class="bi bi-diagram-3"></i>
+                节点 <span class="badge bg-primary ms-1" id="nodes-count">0</span>
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="topics-tab" data-bs-toggle="tab" data-bs-target="#topics-panel" type="button" role="tab">
+                <i class="bi bi-arrow-left-right"></i>
+                话题 <span class="badge bg-info ms-1" id="topics-count">0</span>
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="services-tab" data-bs-toggle="tab" data-bs-target="#services-panel" type="button" role="tab">
+                <i class="bi bi-gear"></i>
+                服务 <span class="badge bg-success ms-1" id="services-count">0</span>
+            </button>
+        </li>
+    </ul>
+
+    <!-- 标签页内容 -->
+    <div class="tab-content" id="rosOverviewTabContent">
+        <!-- 节点面板 -->
+        <div class="tab-pane fade show active" id="nodes-panel" role="tabpanel">
+            <div class="panel-header">
+                <input type="text" class="form-control search-input" id="nodes-search" placeholder="搜索节点...">
+            </div>
+            <div class="entity-list" id="nodes-list">
+                <div class="empty-state">
+                    <i class="bi bi-inbox"></i>
+                    <p>暂无节点数据</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 话题面板 -->
+        <div class="tab-pane fade" id="topics-panel" role="tabpanel">
+            <div class="panel-header">
+                <input type="text" class="form-control search-input" id="topics-search" placeholder="搜索话题...">
+            </div>
+            <div class="entity-list" id="topics-list">
+                <div class="empty-state">
+                    <i class="bi bi-inbox"></i>
+                    <p>暂无话题数据</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 服务面板 -->
+        <div class="tab-pane fade" id="services-panel" role="tabpanel">
+            <div class="panel-header">
+                <input type="text" class="form-control search-input" id="services-search" placeholder="搜索服务...">
+            </div>
+            <div class="entity-list" id="services-list">
+                <div class="empty-state">
+                    <i class="bi bi-inbox"></i>
+                    <p>暂无服务数据</p>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>

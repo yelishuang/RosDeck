@@ -70,10 +70,12 @@ class ROSMonitor:
         node = None
         executor = None
         initialized = False
-        
+
         try:
-            rclpy.init(args=None)
-            initialized = True
+            # 检查 rclpy 是否已初始化
+            if not rclpy.ok():
+                rclpy.init(args=None)
+                initialized = True
             node = rclpy.create_node(self._node_name)
             executor = SingleThreadedExecutor()
             executor.add_node(node)
@@ -93,14 +95,17 @@ class ROSMonitor:
             self._primed_event.set()
         finally:
             if executor and node:
-                executor.remove_node(node)
-            if node is not None:
-                node.destroy_node()
-            if initialized:
                 try:
-                    rclpy.shutdown()
-                except Exception as exc:  # pragma: no cover - 仅用于日志
-                    logger.warning("关闭 rclpy 失败: %s", exc)
+                    executor.remove_node(node)
+                except Exception as e:
+                    logger.debug("移除节点失败: %s", e)
+            if node is not None:
+                try:
+                    node.destroy_node()
+                except Exception as e:
+                    logger.debug("销毁节点失败: %s", e)
+            # 注意：不要在这里调用 rclpy.shutdown()
+            # 因为可能有其他服务（如 ros_graph_monitor）正在使用 rclpy
     
     def _build_stats_snapshot(self, node) -> Dict[str, Any]:
         """采集当前 ROS 图谱数据"""

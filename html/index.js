@@ -280,9 +280,9 @@ function initContentArea() {
 // ==================== 模块加载 ====================
 function loadModule(modulePath) {
     console.log(`加载模块: ${modulePath}`);
-    
+
     const contentArea = $('.content-wrapper .content-area');
-    
+
     // 显示加载状态
     contentArea.html(`
         <div class="loading-container" style="display: flex; justify-content: center; align-items: center; min-height: 60vh;">
@@ -291,28 +291,30 @@ function loadModule(modulePath) {
             </div>
         </div>
     `);
-    
-    // 加载模块HTML
-    const moduleUrl = `modules/${modulePath}/index.html`;
-    const styleUrl = `modules/${modulePath}/style.css`;
-    
+
+    // 生成时间戳破解缓存
+    const timestamp = Date.now();
+    const moduleUrl = `modules/${modulePath}/index.html?t=${timestamp}`;
+    const styleUrl = `modules/${modulePath}/style.css?t=${timestamp}`;
+
     // 先加载样式
     loadModuleStyle(styleUrl);
-    
+
     // 加载HTML内容
     $.ajax({
         url: moduleUrl,
         type: 'GET',
+        cache: false,  // 禁用缓存
         success: function(data) {
             contentArea.html(data);
             currentModule = modulePath;
-            
+
             // 更新面包屑
             updateBreadcrumb(modulePath);
-            
+
             // 加载模块JS（如果存在）
             loadModuleScript(modulePath);
-            
+
             console.log(`模块 ${modulePath} 加载成功`);
         },
         error: function(xhr, status, error) {
@@ -333,8 +335,8 @@ function loadModule(modulePath) {
 function loadModuleStyle(styleUrl) {
     // 移除之前加载的模块样式
     $('link[data-module-style]').remove();
-    
-    // 加载新样式
+
+    // 加载新样式（URL 已包含时间戳参数）
     $('<link>')
         .attr('rel', 'stylesheet')
         .attr('href', styleUrl)
@@ -344,24 +346,26 @@ function loadModuleStyle(styleUrl) {
 
 // 加载模块脚本
 function loadModuleScript(modulePath) {
-    const scriptUrl = `modules/${modulePath}/main.js`;
+    // 生成时间戳破解缓存
+    const timestamp = Date.now();
+    const scriptUrl = `modules/${modulePath}/main.js?t=${timestamp}`;
 
     if (typeof window.moduleCleanup === 'function') {
         window.moduleCleanup();
         window.moduleCleanup = null;
     }
-    
+
     // 移除之前的模块脚本
     $('script[data-module-script]').remove();
-    
+
     // 尝试加载新脚本
     $.ajax({
         url: scriptUrl,
         dataType: 'script',
-        cache: true,
+        cache: false,  // 禁用缓存
         success: function() {
             console.log(`模块脚本加载成功: ${scriptUrl}`);
-            
+
             // 如果模块有初始化函数，调用它
             if (typeof window.moduleInit === 'function') {
                 window.moduleInit();

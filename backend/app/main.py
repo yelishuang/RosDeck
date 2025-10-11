@@ -11,6 +11,7 @@ import logging
 from app.routes import auth
 from app.routes import system
 from app.routes import ros
+from app.routes import ros_comm
 from app.routes import device
 from app.routes import files
 from app.routes import terminal
@@ -18,6 +19,7 @@ from app.routes import network
 from app.routes import logs
 from app.routes import storage
 from app.routes import runtime
+from app.routes import ros_config
 
 # 导入依赖
 from app.deps.csrf import csrf_protection
@@ -56,6 +58,7 @@ async def log_requests(request: Request, call_next):
 app.include_router(auth.router)
 app.include_router(system.router)
 app.include_router(ros.router)
+app.include_router(ros_comm.router)
 app.include_router(device.router)
 app.include_router(files.router)
 app.include_router(terminal.router)
@@ -63,6 +66,7 @@ app.include_router(network.router)
 app.include_router(logs.router)
 app.include_router(storage.router)
 app.include_router(runtime.router)
+app.include_router(ros_config.router)
 
 # 埋点接口
 @app.post("/api/metrics")

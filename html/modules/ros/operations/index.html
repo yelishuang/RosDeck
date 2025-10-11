@@ -1,8 +1,468 @@
-<div class="module-placeholder">
-    <div class="placeholder-icon">
-        <i class="bi bi-sliders"></i>
+<div class="ros-operations-module">
+    <div class="module-header">
+        <div>
+            <h2 class="module-title">
+                <i class="bi bi-sliders"></i>
+                ROS 采集与配置中心
+            </h2>
+            <p class="module-desc">管理 ROS 参数、录制与回放数据、节点生命周期以及 Launch 任务</p>
+        </div>
+        <div class="module-actions">
+            <button class="btn btn-outline-secondary btn-sm" data-action="refresh-all">
+                <i class="bi bi-arrow-repeat"></i>
+                刷新全部
+            </button>
+        </div>
     </div>
-    <h2 class="placeholder-title">采集与配置</h2>
-    <p class="placeholder-desc">ROS 参数配置与数据采集</p>
-    <div class="placeholder-status">开发中...</div>
+
+    <div class="operations-tabs">
+        <button class="tab-link active" data-tab="parameters">
+            <i class="bi bi-sliders"></i>
+            参数管理
+        </button>
+        <button class="tab-link" data-tab="recording">
+            <i class="bi bi-record-circle"></i>
+            数据录制
+        </button>
+        <button class="tab-link" data-tab="bags">
+            <i class="bi bi-archive"></i>
+            Bag 管理
+        </button>
+        <button class="tab-link" data-tab="lifecycle">
+            <i class="bi bi-arrow-repeat-circle"></i>
+            节点生命周期
+        </button>
+        <button class="tab-link" data-tab="launch">
+            <i class="bi bi-rocket"></i>
+            Launch 管理
+        </button>
+    </div>
+
+    <div class="tab-content">
+        <!-- 参数管理 -->
+        <div class="tab-panel active" id="tab-parameters">
+            <div class="parameter-layout">
+                <aside class="parameter-sidebar card">
+                    <div class="card-header">
+                        <div class="sidebar-title">节点列表</div>
+                        <input type="text" id="parameter-node-search" class="form-control form-control-sm" placeholder="搜索节点...">
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="node-list-empty text-muted" id="parameter-node-empty">未检测到节点</div>
+                        <ul class="list-group list-group-flush" id="parameter-node-list"></ul>
+                    </div>
+                </aside>
+                <section class="parameter-content card">
+                    <div class="card-header parameter-toolbar">
+                        <div class="toolbar-left">
+                            <h5 class="mb-0">
+                                <span id="parameter-current-node">请选择节点</span>
+                                <span class="badge bg-secondary" id="parameter-count-badge"></span>
+                            </h5>
+                            <div class="parameter-status">
+                                <span class="status-dot" id="parameter-status-dot"></span>
+                                <span id="parameter-status-text">等待数据...</span>
+                            </div>
+                        </div>
+                        <div class="toolbar-right">
+                            <div class="btn-group btn-group-sm me-2" role="group">
+                                <button class="btn btn-outline-primary active" data-view-mode="flat">平铺视图</button>
+                                <button class="btn btn-outline-primary" data-view-mode="tree">树形视图</button>
+                            </div>
+                            <div class="input-group input-group-sm parameter-search">
+                                <span class="input-group-text"><i class="bi bi-search"></i></span>
+                                <input type="text" id="parameter-filter" class="form-control" placeholder="搜索参数...">
+                            </div>
+                            <button class="btn btn-outline-success btn-sm ms-2" data-action="export-params">
+                                <i class="bi bi-download"></i>
+                                导出快照
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body parameter-body">
+                        <div class="parameter-table-view">
+                            <table class="table table-sm table-hover" id="parameter-table">
+                                <thead>
+                                    <tr>
+                                        <th>名称</th>
+                                        <th>类型</th>
+                                        <th>值</th>
+                                        <th>描述</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="parameter-table-body">
+                                    <tr class="text-muted">
+                                        <td colspan="4" class="text-center py-4">选择节点以查看参数</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="parameter-tree-view d-none" id="parameter-tree-root">
+                            <div class="tree-empty text-muted">选择节点以查看树形参数视图</div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </div>
+
+        <!-- 数据录制 -->
+        <div class="tab-panel" id="tab-recording">
+            <div class="recording-layout">
+                <div class="recording-left">
+                    <div class="card mb-3">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">录制新任务</h5>
+                            <span class="badge bg-warning text-dark admin-only">管理员</span>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-2">
+                                <label class="form-label">选择话题</label>
+                                <div class="topic-selector" id="recording-topic-list">
+                                    <div class="empty-placeholder text-muted">正在加载话题列表...</div>
+                                </div>
+                            </div>
+                            <div class="mb-2">
+                                <label class="form-label">自定义话题（逗号分隔）</label>
+                                <input type="text" id="recording-custom-topics" class="form-control form-control-sm" placeholder="/custom/topic1, /custom/topic2">
+                            </div>
+                            <div class="row g-2 mb-3">
+                                <div class="col-6">
+                                    <label class="form-label">时长限制 (秒)</label>
+                                    <input type="number" min="0" class="form-control form-control-sm" id="recording-duration">
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label">大小限制 (MB)</label>
+                                    <input type="number" min="0" class="form-control form-control-sm" id="recording-size-limit">
+                                </div>
+                            </div>
+                            <button class="btn btn-primary w-100 admin-only" data-action="start-recording">
+                                <i class="bi bi-record-circle"></i>
+                                启动录制
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">录制预设模板</h5>
+                            <small class="text-muted">单击即可应用</small>
+                        </div>
+                        <div class="card-body" id="recording-presets">
+                            <div class="empty-placeholder text-muted">暂无预设</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="recording-right">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">进行中的录制</h5>
+                            <button class="btn btn-outline-danger btn-sm admin-only" data-action="stop-all-recordings">
+                                <i class="bi bi-stop-circle"></i>
+                                停止全部
+                            </button>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-sm table-hover mb-0">
+                                    <thead>
+                                        <tr>
+                                            <th>话题</th>
+                                            <th>已运行</th>
+                                            <th>文件大小</th>
+                                            <th>消息数</th>
+                                            <th class="admin-only">操作</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="recording-active-body">
+                                        <tr class="text-muted">
+                                            <td colspan="5" class="text-center py-4">暂无录制任务</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bag 管理 -->
+        <div class="tab-panel" id="tab-bags">
+            <div class="bag-layout">
+                <div class="card mb-3">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Bag 文件列表</h5>
+                        <button class="btn btn-outline-secondary btn-sm" data-action="refresh-bags">
+                            <i class="bi bi-arrow-clockwise"></i>
+                            刷新
+                        </button>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-sm table-striped mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>名称</th>
+                                        <th>大小</th>
+                                        <th>创建时间</th>
+                                        <th>话题统计</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="bags-table-body">
+                                    <tr class="text-muted">
+                                        <td colspan="5" class="text-center py-4">未找到 Bag 数据</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">回放与导出</h5>
+                        <span class="badge bg-warning text-dark admin-only">管理员</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-12 col-md-6">
+                                <h6 class="mb-2">启动回放</h6>
+                                <div class="mb-2">
+                                    <label class="form-label">Bag 文件</label>
+                                    <select id="playback-bag-select" class="form-select form-select-sm">
+                                        <option value="">选择 Bag 文件</option>
+                                    </select>
+                                </div>
+                                <div class="row g-2 mb-2">
+                                    <div class="col-6">
+                                        <label class="form-label">播放速率</label>
+                                        <input type="number" step="0.1" min="0.1" id="playback-rate" class="form-control form-control-sm" value="1.0">
+                                    </div>
+                                    <div class="col-6 d-flex align-items-end">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" id="playback-loop">
+                                            <label class="form-check-label" for="playback-loop">循环播放</label>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label">限定话题（可选，逗号分隔）</label>
+                                    <input type="text" id="playback-topics" class="form-control form-control-sm" placeholder="/topic1, /topic2">
+                                </div>
+                                <button class="btn btn-outline-primary w-100 admin-only" data-action="start-playback">
+                                    <i class="bi bi-play-circle"></i>
+                                    启动回放
+                                </button>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <h6 class="mb-2">导出数据</h6>
+                                <div class="mb-2">
+                                    <label class="form-label">Bag 文件</label>
+                                    <select id="export-bag-select" class="form-select form-select-sm">
+                                        <option value="">选择 Bag 文件</option>
+                                    </select>
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label">导出格式</label>
+                                    <div class="btn-group btn-group-sm w-100" role="group">
+                                        <button class="btn btn-outline-secondary active" data-export-format="json">JSON</button>
+                                        <button class="btn btn-outline-secondary" data-export-format="csv">CSV</button>
+                                    </div>
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label">限定话题（可选，逗号分隔）</label>
+                                    <input type="text" id="export-topics" class="form-control form-control-sm">
+                                </div>
+                                <div class="row g-2 mb-3">
+                                    <div class="col">
+                                        <label class="form-label">开始时间(ns)</label>
+                                        <input type="number" min="0" class="form-control form-control-sm" id="export-start-ns">
+                                    </div>
+                                    <div class="col">
+                                        <label class="form-label">结束时间(ns)</label>
+                                        <input type="number" min="0" class="form-control form-control-sm" id="export-end-ns">
+                                    </div>
+                                </div>
+                                <button class="btn btn-success w-100 admin-only" data-action="export-bag">
+                                    <i class="bi bi-cloud-download"></i>
+                                    导出数据
+                                </button>
+                            </div>
+                        </div>
+                        <hr>
+                        <h6 class="mb-2">进行中的回放</h6>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-striped mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Bag</th>
+                                        <th>速率</th>
+                                        <th>循环</th>
+                                        <th>话题</th>
+                                        <th class="admin-only">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="playback-table-body">
+                                    <tr class="text-muted">
+                                        <td colspan="5" class="text-center py-3">暂无回放任务</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 生命周期 -->
+        <div class="tab-panel" id="tab-lifecycle">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">生命周期节点</h5>
+                    <button class="btn btn-outline-secondary btn-sm" data-action="refresh-lifecycle">
+                        <i class="bi bi-arrow-repeat"></i>
+                        刷新
+                    </button>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>节点</th>
+                                    <th>命名空间</th>
+                                    <th>生命周期</th>
+                                    <th>当前状态</th>
+                                    <th>可用状态</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="lifecycle-table-body">
+                                <tr class="text-muted">
+                                    <td colspan="6" class="text-center py-4">暂无数据</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Launch 管理 -->
+        <div class="tab-panel" id="tab-launch">
+            <div class="launch-layout">
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">Launch 文件库</h5>
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="launch-include-global">
+                                    <label class="form-check-label" for="launch-include-global">包含系统目录</label>
+                                </div>
+                                <div class="input-group input-group-sm w-auto">
+                                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                                    <input type="text" id="launch-search" class="form-control" placeholder="搜索 launch...">
+                                </div>
+                                <button class="btn btn-outline-secondary btn-sm" data-action="refresh-launch-list">
+                                    <i class="bi bi-arrow-repeat"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-sm table-striped mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>名称</th>
+                                        <th>路径</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="launch-files-body">
+                                    <tr class="text-muted">
+                                        <td colspan="3" class="text-center py-4">未找到 Launch 文件</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">运行中的 Launch 任务</h5>
+                        <span class="badge bg-warning text-dark admin-only">管理员</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-12 col-lg-6">
+                                <h6 class="mb-2">启动新任务</h6>
+                                <div class="mb-2">
+                                    <label class="form-label">包名（可选）</label>
+                                    <input type="text" class="form-control form-control-sm" id="launch-package">
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label">Launch 文件</label>
+                                    <input type="text" class="form-control form-control-sm" id="launch-file" placeholder="示例: nav2_bringup navigation_launch.py 或 /path/to/file.launch.py">
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label">参数 (key:=value，多项用空格分隔)</label>
+                                    <input type="text" class="form-control form-control-sm" id="launch-parameters">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">附加参数</label>
+                                    <input type="text" class="form-control form-control-sm" id="launch-extra-args" placeholder="--ros-args ...">
+                                </div>
+                                <button class="btn btn-primary w-100 admin-only" data-action="start-launch">
+                                    <i class="bi bi-rocket-takeoff"></i>
+                                    启动 Launch
+                                </button>
+                            </div>
+                            <div class="col-12 col-lg-6">
+                                <h6 class="mb-2">活动任务</h6>
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-hover mb-0">
+                                        <thead>
+                                            <tr>
+                                                <th>ID</th>
+                                                <th>命令</th>
+                                                <th>启动时间</th>
+                                                <th class="admin-only">操作</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="launch-active-body">
+                                            <tr class="text-muted">
+                                                <td colspan="4" class="text-center py-4">暂无运行中的 Launch</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 通用模态框 -->
+<div class="modal fade" id="ros-operations-modal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">详情</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <pre class="modal-content-pre"></pre>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+            </div>
+        </div>
+    </div>
 </div>
