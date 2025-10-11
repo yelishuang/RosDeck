@@ -299,7 +299,10 @@
             state.filteredNodes = state.parameterNodes;
             renderParameterNodeList();
             document.getElementById("parameter-status-dot")?.classList.toggle("online", Boolean(data.available));
-            document.getElementById("parameter-status-text").textContent = data.available ? "数据实时同步中" : "ROS 参数服务不可用";
+            const statusTextEl = document.getElementById("parameter-status-text");
+            if (statusTextEl) {
+                statusTextEl.textContent = data.available ? "数据实时同步中" : "ROS 参数服务不可用";
+            }
         } catch (error) {
             console.error("加载参数节点失败", error);
             notify("error", "加载参数节点失败");
