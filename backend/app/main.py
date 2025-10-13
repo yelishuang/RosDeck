@@ -12,6 +12,7 @@ from app.routes import auth
 from app.routes import system
 from app.routes import ros
 from app.routes import ros_comm
+from app.routes import ros_ai
 from app.routes import device
 from app.routes import files
 from app.routes import terminal
@@ -59,6 +60,7 @@ app.include_router(auth.router)
 app.include_router(system.router)
 app.include_router(ros.router)
 app.include_router(ros_comm.router)
+app.include_router(ros_ai.router)
 app.include_router(device.router)
 app.include_router(files.router)
 app.include_router(terminal.router)

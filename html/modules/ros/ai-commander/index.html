@@ -1,8 +1,152 @@
-<div class="module-placeholder">
-    <div class="placeholder-icon">
-        <i class="bi bi-cpu"></i>
+<!-- ROS-AI 指挥官界面 -->
+<div class="ai-commander-container">
+    <!-- 标题栏 -->
+    <div class="commander-header">
+        <div class="header-left">
+            <div class="header-icon">
+                <i class="bi bi-robot"></i>
+            </div>
+            <div class="header-info">
+                <h2 class="header-title">ROS-AI 指挥官</h2>
+                <p class="header-subtitle">使用自然语言控制 ROS 小乌龟</p>
+            </div>
+        </div>
+        <div class="header-right">
+            <div class="status-indicator" id="ai-status">
+                <span class="status-dot"></span>
+                <span class="status-text">AI 就绪</span>
+            </div>
+            <div class="status-indicator" id="ros-status">
+                <span class="status-dot"></span>
+                <span class="status-text">ROS 连接中</span>
+            </div>
+        </div>
     </div>
-    <h2 class="placeholder-title">ROS-AI 指挥官</h2>
-    <p class="placeholder-desc">AI 辅助的 ROS 系统管理</p>
-    <div class="placeholder-status">开发中...</div>
+
+    <!-- 主内容区域 - 2x2 网格布局 -->
+    <div class="commander-layout">
+        <div class="commander-row row-top">
+            <!-- 左上：AI 对话区 -->
+            <section class="panel panel-chat">
+                <div class="panel-header">
+                    <div class="panel-title">
+                        <i class="bi bi-chat-dots"></i>
+                        <span>AI 对话</span>
+                    </div>
+                <button class="btn-clear" id="btn-clear-chat" title="清空对话">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </div>
+            <div class="panel-body">
+                <div class="chat-messages" id="chat-messages">
+                    <div class="chat-welcome">
+                        <i class="bi bi-lightbulb"></i>
+                        <p>您好！我是 ROS-AI 助手。</p>
+                        <p>请用自然语言告诉我如何控制小乌龟，例如：</p>
+                        <div class="example-commands">
+                            <span class="example-cmd">"向前移动 2 米"</span>
+                            <span class="example-cmd">"顺时针旋转 90 度"</span>
+                            <span class="example-cmd">"画一个正方形"</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="chat-input-area">
+                    <textarea
+                        class="chat-input"
+                        id="chat-input"
+                        placeholder="输入指令，例如：让小乌龟前进 2 米然后左转..."
+                        rows="2"></textarea>
+                    <button class="btn-send" id="btn-send">
+                        <i class="bi bi-send-fill"></i>
+                        <span>发送</span>
+                    </button>
+                </div>
+            </div>
+            </section>
+
+            <!-- 右上：JSON 指令显示区 -->
+            <section class="panel panel-json">
+                <div class="panel-header">
+                    <div class="panel-title">
+                        <i class="bi bi-code-square"></i>
+                        <span>JSON 指令</span>
+                    </div>
+                <button class="btn-copy" id="btn-copy-json" title="复制 JSON">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+            </div>
+            <div class="panel-body">
+                <pre class="json-display" id="json-display"><code>{
+  "status": "waiting",
+  "message": "等待 AI 指令..."
+}</code></pre>
+                </div>
+            </section>
+        </div>
+
+        <!-- 左下：实时视频 -->
+        <div class="commander-row row-bottom">
+            <section class="panel panel-video">
+                <div class="panel-header">
+                    <div class="panel-title">
+                        <i class="bi bi-camera-video"></i>
+                        <span>实时画面</span>
+                    </div>
+                <div class="video-controls">
+                    <span class="video-status waiting" id="video-status">
+                        <span class="status-dot"></span>
+                        <span class="status-text">待连接</span>
+                    </span>
+                    <button class="btn-video-action" id="btn-video-reload" title="重新连接">
+                        <i class="bi bi-arrow-clockwise"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="panel-body">
+                <div class="video-wrapper" id="video-wrapper">
+                    <div class="video-placeholder" id="video-placeholder">
+                        <i class="bi bi-rocket-takeoff"></i>
+                        <p>等待启动 turtlesim...</p>
+                    </div>
+                    <img
+                        id="turtle-video"
+                        class="video-stream"
+                        alt="Turtlesim 视频流"
+                        decoding="async"
+                    />
+                </div>
+                <div class="video-hint" id="video-hint">
+                    建议先点击上方的“启动 Turtlesim”，随后会自动建立视频流。
+                </div>
+            </div>
+            </section>
+
+            <!-- 右下：持续消息日志区 -->
+            <section class="panel panel-logs">
+                <div class="panel-header">
+                    <div class="panel-title">
+                        <i class="bi bi-list-ul"></i>
+                        <span>运动参数日志</span>
+                    </div>
+                <div class="log-controls">
+                    <button class="btn-log-control" id="btn-toggle-autoscroll" title="自动滚动" data-active="true">
+                        <i class="bi bi-arrow-down-circle-fill"></i>
+                    </button>
+                    <button class="btn-log-control" id="btn-clear-logs" title="清空日志">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="panel-body">
+                <div class="log-messages" id="log-messages">
+                    <div class="log-entry log-info">
+                        <span class="log-time">--:--:--</span>
+                        <span class="log-icon"><i class="bi bi-info-circle"></i></span>
+                        <span class="log-content">等待小乌龟运动数据...</span>
+                    </div>
+                </div>
+            </div>
+            </section>
+        </div>
+    </div>
 </div>

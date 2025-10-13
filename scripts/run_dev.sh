@@ -128,17 +128,34 @@ else
 fi
 log_i "前端就绪： http://localhost:${FRONTEND_PORT}/  （登录页：/auth/login.html）"
 
-# ===== 后端：准备虚拟环境与依赖 =====
-# if [[ ! -d "$VENV_DIR" ]]; then
-#   log_i "创建后端虚拟环境：$VENV_DIR"
-#   python3 -m venv "$VENV_DIR"
-# fi
+# # ===== 后端：准备虚拟环境与依赖 =====
+# 检查是否需要重建虚拟环境（用于支持 ROS/rclpy）
+VENV_PYVENV_CFG="$VENV_DIR/pyvenv.cfg"
+NEED_REBUILD=false
 
-# # 确保 Python 包结构完整
-# log_i "初始化 Python 包结构"
-# touch "$BACKEND_DIR/app/services/__init__.py"
-# touch "$BACKEND_DIR/app/models/__init__.py"
-# touch "$BACKEND_DIR/app/ws/__init__.py"
+if [[ ! -d "$VENV_DIR" ]]; then
+  NEED_REBUILD=true
+  log_i "虚拟环境不存在，将创建新环境"
+elif [[ -f "$VENV_PYVENV_CFG" ]] && ! grep -q "include-system-site-packages = true" "$VENV_PYVENV_CFG"; then
+  log_w "检测到虚拟环境未启用 system-site-packages（ROS/rclpy 需要）"
+  log_i "将重建虚拟环境以支持 ROS"
+  NEED_REBUILD=true
+fi
+
+if [[ "$NEED_REBUILD" == true ]]; then
+  if [[ -d "$VENV_DIR" ]]; then
+    log_i "备份并删除旧虚拟环境"
+    rm -rf "$VENV_DIR"
+  fi
+  log_i "创建后端虚拟环境：$VENV_DIR（允许访问系统包，用于 ROS）"
+  python3 -m venv "$VENV_DIR" --system-site-packages
+fi
+
+# 确保 Python 包结构完整
+log_i "初始化 Python 包结构"
+touch "$BACKEND_DIR/app/services/__init__.py"
+touch "$BACKEND_DIR/app/models/__init__.py"
+touch "$BACKEND_DIR/app/ws/__init__.py"
 
 # # shellcheck disable=SC1091
 # source "$VENV_DIR/bin/activate"
@@ -149,6 +166,28 @@ log_i "前端就绪： http://localhost:${FRONTEND_PORT}/  （登录页：/auth/
 # else
 #   log_w "未找到 $BACKEND_DIR/requirements.txt，跳过依赖安装"
 # fi
+
+# 验证 rclpy 是否可用（需要先临时加载 ROS 环境）
+log_i "验证 ROS Python 绑定 (rclpy)..."
+(
+  # 临时加载 ROS 环境用于验证
+  set +u
+  if [[ -n "${ROS_DISTRO:-}" ]] && [[ -f "/opt/ros/$ROS_DISTRO/setup.bash" ]]; then
+    # shellcheck disable=SC1090
+    source "/opt/ros/$ROS_DISTRO/setup.bash"
+  fi
+  set -u
+
+  if python -c "import rclpy" 2>/dev/null; then
+    echo "✓ rclpy 可用"
+  else
+    echo "✗ rclpy 不可用"
+    exit 1
+  fi
+) && log_i "✓ rclpy 可用，ROS 功能将正常工作" || {
+  log_w "✗ rclpy 不可用，ROS 相关功能可能受限"
+  log_w "  请确保已安装 ROS 并在启动前执行: source /opt/ros/\$ROS_DISTRO/setup.bash"
+}
 
 # ===== 后端：后台启动（独立日志与 PID）=====
 sudo mkdir -p "$LOG_DIR"
@@ -168,9 +207,47 @@ fi
 log_i "后台启动后端：${BACKEND_HOST}:${BACKEND_PORT}（日志：$BACKEND_LOG）"
 (
   cd "$BACKEND_DIR"
+
+  # 允许本地 X11 连接（用于窗口捕获）
+  if command -v xhost >/dev/null 2>&1; then
+    xhost +local: >/dev/null 2>&1 || log_w "无法设置 xhost 权限（非关键）"
+  fi
+
+  # ===== 加载 ROS 环境（用于 rclpy）=====
+  # 临时允许未绑定变量（ROS setup.bash 需要）
+  set +u
+
+  if [[ -n "${ROS_DISTRO:-}" ]]; then
+    log_i "检测到 ROS_DISTRO=$ROS_DISTRO，加载 ROS 环境"
+    ROS_SETUP="/opt/ros/$ROS_DISTRO/setup.bash"
+    if [[ -f "$ROS_SETUP" ]]; then
+      # shellcheck disable=SC1090
+      source "$ROS_SETUP"
+      log_i "已加载 ROS 环境: $ROS_SETUP"
+    else
+      log_w "未找到 ROS setup 文件: $ROS_SETUP"
+    fi
+  else
+    log_w "未设置 ROS_DISTRO 环境变量，尝试自动检测..."
+    for distro in humble iron galactic foxy; do
+      ROS_SETUP="/opt/ros/$distro/setup.bash"
+      if [[ -f "$ROS_SETUP" ]]; then
+        log_i "自动检测到 ROS $distro，加载环境"
+        # shellcheck disable=SC1090
+        source "$ROS_SETUP"
+        break
+      fi
+    done
+  fi
+
+
   # shellcheck disable=SC1091
   source "$VENV_DIR/bin/activate"
+
   # 以后台方式启动，日志写入文件
+  # 显式传递 DISPLAY 和 XAUTHORITY 环境变量（用于窗口捕获）
+  DISPLAY="${DISPLAY:-:0}" \
+  XAUTHORITY="${XAUTHORITY:-$HOME/.Xauthority}" \
   nohup uvicorn app.main:app \
     --host "$BACKEND_HOST" \
     --port "$BACKEND_PORT" \
