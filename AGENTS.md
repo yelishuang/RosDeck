@@ -1,19 +1,132 @@
-# Repository Guidelines
+# RosDeck Codex 工作指南
 
-## Project Structure & Module Organization
-RosDeck pairs a FastAPI backend in `backend/app/` with a static client under `html/`. Feature routers live in `backend/app/routes/`, shared dependencies in `backend/app/deps/`, services in `backend/app/services/`, and WebSocket handlers in `backend/app/ws/`. Configuration samples reside at `backend/config.example.yaml`, while backend tests belong in `backend/tests/`. Front-end modules load from `html/index.js`, with feature modules inside `html/modules/`, shared widgets in `html/shared/`, and styles and assets next to `html/index.css` and `html/assets/`. Deployment and helper code sit in `nginx/` and `privileged/`, with architecture notes in `docs/`.
+本文面向在 RosDeck 仓库内执行自动化及协作任务的 Codex 代理，确保工作方式统一、输出可靠。
 
-## Build, Test, and Development Commands
-Use `python3 -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt` inside `backend/` to prep dependencies. Start the API locally via `uvicorn app.main:app --reload --host 127.0.0.1 --port 4162`. Run the full stack with `scripts/run_dev.sh` (requires sudo for syncing nginx assets and building PAM helpers) and stop it using `scripts/stop.sh`. For UI-only tweaks, serve the static files with `python3 -m http.server` from `html/`. Execute backend tests through `pytest backend/tests`.
+## 1. 项目简介
 
-## Coding Style & Naming Conventions
-Follow PEP 8 with four-space indents, snake_case functions, and PascalCase Pydantic models. Group backend routes by domain (`routes/runtime.py`, `routes/ros.py`) and reuse dependencies under `deps/` to keep CSRF and auth consistent. Prefer descriptive logging via the configuration in `app/main.py`. Front-end JavaScript favors camelCase, jQuery event hooks, and filenames mirroring menu entries (e.g., `html/modules/ros-status.js`).
+### 1.1 目的
+- 提供一体化的自托管运维面板，集中管理局域网内的 ROS 2 设备。
+- 支撑系统监控、设备诊断、ROS 工作负载管理与日常维护。
 
-## Testing Guidelines
-Tests leverage Pytest plus `httpx.AsyncClient` to exercise FastAPI endpoints; mirror router names (`test_runtime.py`) and mock privileged helpers or filesystem calls. Aim for deterministic tests and document any manual ROS prerequisites in `docs/`. Use `pytest backend/tests` before submitting changes.
+### 1.2 核心功能
+- 实时监控：CPU、内存、磁盘、网络等关键指标的持续可视化。
+- 系统操作：进程与 systemd 管理、日志查询、存储维护、网络配置。
+- 工具集成：Web 终端、文件传输、诊断工具。
+- ROS 能力：节点与话题监测、参数管理、数据录制与回放、AI 辅助模块。
 
-## Commit & Pull Request Guidelines
-Commits follow Conventional Commit prefixes with scoped areas (`fix(runtime): guard missing PID`). Squash exploratory work before pushing. Pull requests should explain the change, list validation commands, link related issues, and attach screenshots or terminal captures for UI updates. Flag modifications that require rerunning `scripts/run_dev.sh` so reviewers can rebuild helpers.
+### 1.3 用户群体
+- 机器人开发与测试团队、实验室运维工程师。
+- 需要远程管理 ROS 2 设备的企业 IT 或 DevOps 团队。
+- 具备基础 Linux/ROS 知识的高级用户。
 
-## Security & Configuration Tips
-Treat `privileged/src/*.c` edits as sensitive—they compile to setuid binaries. Copy `backend/config.example.yaml` when adjusting configuration. Review the nginx paths invoked by `scripts/run_dev.sh` and inspect `/var/log/rosdeck/` after deployments.
+## 2. 系统结构
+
+### 2.1 仓库目录速览
+- `backend/`：FastAPI 服务，提供 REST、WebSocket、系统命令桥接。
+- `html/`：前端静态资源，基于 jQuery + Bootstrap 的单页结构。
+- `docs/`：架构与规格文档（当前结构文档部分仍为占位）。
+- `nginx/`：部署示例及反向代理配置骨架。
+- `scripts/`：部署与维护脚本（待完善）。
+- `privileged/`：保留目录，通常存放需要特权访问的脚本或配置。
+- `review-report.md`：既有审查意见与风险清单。
+
+### 2.2 后端结构
+- `app/main.py`：应用入口、路由注册、全局中间件及健康检查。
+- `app/routes/`：按领域划分的 API（系统、网络、存储、ROS、终端等）。
+- `app/services/`：执行系统命令、ROS 接入、资源监控的服务层。
+- `app/deps/`：依赖模块（认证、CSRF、速率限制等）。
+- `app/models/`：Pydantic 模型定义。
+- `app/ws/`：WebSocket 终端与 ROS 通信实现。
+- 依赖清单：`backend/requirements.txt` 定义 FastAPI、websockets、psutil、python-pam 等。
+
+### 2.3 前端结构
+- `index.html` + `index.js`：总入口、布局与动态模块加载。
+- `modules/`：各功能模块的 JS/HTML/CSS 片段（例如 `modules/runtime`、`modules/network`）。
+- `assets/` 与 `libs/`：公共样式、图标、第三方库。
+- `auth/`：登录页静态文件，部署到 Nginx 静态目录供后端注入 CSRF。
+
+### 2.4 部署与运行环境
+- Python 3.10+（建议与 FastAPI 兼容版本），pip 管理依赖。
+- Uvicorn 作为 ASGI 服务器，通常在 4162 端口运行，前面由 Nginx 转发。
+- 操作系统默认假设为基于 systemd 的 Linux，提供 `systemctl`、`journalctl`、`ros2` 等命令。
+- ROS 2 发行版（Foxy/Humble 等）及相关 CLI 需正确安装并配置环境变量。
+
+### 2.5 外部依赖与约束
+- 后端通过本地命令访问系统与 ROS 功能，需具备相应权限（部分操作要求 sudo）。
+- Web 终端使用 `ptyprocess` 创建伪终端；需要保证宿主支持 PTY。
+- 前端依赖浏览器对 ES6、Fetch API、WebSocket、CSS 变量等能力的支持。
+
+### 2.6 配置与敏感信息
+- `backend/config.example.yaml` 提供配置骨架，真实部署需复制为 `config.yaml` 并填充凭据。
+- ROS AI 模块默认值可能含敏感 Token，禁止在仓库中硬编码实际密钥。
+- Nginx 静态目录路径 `/usr/share/nginx/html/rosdeck` 与后端耦合，部署时需同步维护。
+
+## 3. Codex 工作目标
+
+### 3.1 自动化范围
+- 编写与维护后端 Python 代码、前端静态资源、配置样例与脚本。
+- 生成/更新文档（规格、架构、指南、审查报告) 及必要的测试样例。
+- 协助执行审查、分析、诊断并输出结构化结论。
+
+### 3.2 工作边界
+- 避免直接执行破坏性命令（删除、重置、覆盖敏感文件），除非用户明确授权。
+- 不擅自引入外部依赖或网络下载，若需新增包/镜像须说明理由并经确认。
+- 不修改用户已有未提交的变更；如遇冲突必须提示并请求指示。
+- 对安全架构等高风险变更，在实施前给出方案与影响分析，必要时先征求确认。
+
+## 4. 审查职责
+- **代码质量**：识别逻辑缺陷、异常处理遗漏、阻塞风险、并发隐患。
+- **架构一致性**：遵循现有模块划分与依赖注入策略，避免新增耦合。
+- **安全与权限**：重点检查认证、授权、CSRF、会话、命令执行路径。
+- **测试策略**：引导建立自动化测试，至少覆盖关键 API 行为与系统命令封装。
+- **文档同步**：变更影响到用户流程或部署方式时，同步更新 `docs/` 与指南。
+
+## 5. 生成文档规范
+- 默认使用 Markdown（`.md`），采用一级标题开篇，随后按照逻辑层级分节。
+- 文件命名遵循 PascalCase 或中划线加主题，例如 `AGENTS.md`、`ARCHITECTURE.md`。
+- 文档应保存在 `docs/` 或项目根目录；指南与规范类文档置于根目录提升可见性。
+- 内容需含目录或清晰的小节编号，语言保持专业、避免口语化。
+- 插入代码或命令时使用 fenced code block，并注明语言（例如 ```bash）。
+
+## 6. 编辑与执行规则
+
+### 6.1 操作约定
+- 使用 `apply_patch` 进行精确修改；批量替换时可调用脚本，但须说明目的。
+- 运行命令时总是通过 `["bash","-lc", "..."]` 并显式设置 `workdir`。
+- 禁止使用 `git reset --hard`、`git checkout --` 等破坏性命令。
+- 避免覆盖非 ASCII 文件；除非已有多语言需求，默认保持 ASCII。
+
+### 6.2 审批与沙箱
+- 当前配置：`sandbox_mode=workspace-write`、`network_access=restricted`、`approval_policy=on-request`。
+- 需要访问受限目录、网络、或执行潜在破坏性操作时，先尝试无权限方案；若无法规避，提交带 `with_escalated_permissions=true` 的命令请求。
+- 所有命令失败如因权限受限，应立即请求提升或提示用户。
+
+### 6.3 文件保护与同步
+- 不回滚或覆盖用户已存在的改动；发现脏工作区应停止并确认处理方式。
+- 关键文档（`AGENTS.md`、`review-report.md`、`docs/*`）修改前应阅读上下文，避免丢失既有结论。
+- 配置范例与脚本须保留注释与占位符，确保读者知道需手动填充部分。
+
+## 7. 交互风格
+- 默认输出简洁、聚焦重点；当变更复杂或风险较高时，提供分节说明与可选方案。
+- 需要用户决策时（新增依赖、变更架构、执行敏感操作）主动列出选项并请求确认。
+- 对错误或未知状态保持透明，说明判断依据与后续建议。
+- 如任务存在多解或假设不足，优先提出澄清问题，再推进实现。
+
+## 8. 日志与变更记录策略
+- 重要审查发现集中记录或更新 `review-report.md`，确保风险追踪。
+- 代码变更建议按模块撰写 commit 信息（若由用户执行提交），格式：`<scope>: <summary>`。
+- 复杂问题处理过程可在会话中保持要点日志，结束时给出复盘建议。
+- 对外发布前同步更新 `docs/ARCHITECTURE.md` 等核心文档，保持描述与实现一致。
+
+## 9. 后续任务模板
+- `/review`：对指定改动执行结构化代码审查，优先输出问题清单后再做总结。
+- `/diff`：展示当前工作区改动摘要，便于核对或准备提交。
+- `/compact`：整理冗长对话或输出精简版摘要。
+- 建议流程：完成实现 → `/diff` 确认 → `/review` 自检或交叉检查 → 根据需要 `/compact` 输出精要摘要。
+
+## 10. 输出要求
+- 对外回复遵循结构化 Markdown，必要时添加标题与要点列表，保持 4–6 条以内的聚合信息。
+- 引用文件需使用反引号包裹路径并附带行号（如 `backend/app/main.py:42`），单条引用不跨文件。
+- 提供命令或代码片段时使用 fenced block，命令前注明用途。
+- 若未执行验证步骤，应在回复中说明原因并建议用户后续操作。
+

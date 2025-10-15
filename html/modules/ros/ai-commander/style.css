@@ -465,6 +465,7 @@
     background: transparent;
     flex: 1 1 0%;
     min-height: 0;
+    max-height: 360px;
 }
 
 .panel-logs .log-controls {
@@ -502,6 +503,7 @@
     overflow-y: auto;
     flex: 1 1 0%;
     min-height: 0;
+    max-height: 320px;
 }
 
 .panel-logs .log-entry {
