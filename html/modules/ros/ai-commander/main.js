@@ -1,9 +1,9 @@
 /**
- * ROS-AI 指挥官模块
- * 使用 AI 自然语言控制 ROS 小乌龟
+ * ROS AI Commander module.
+ * Exposes natural-language turtlesim control via the backend AI bridge.
  */
 
-// ==================== 全局变量 ====================
+// ==================== Module state ====================
 let wsConnection = null;
 let autoScroll = true;
 let messageHistory = [];
@@ -15,28 +15,28 @@ let videoHasConnected = false;
 let lastLogSnapshot = null;
 let jsonHighlightTimer = null;
 
-// ==================== 模块初始化 ====================
+// ==================== Module bootstrap ====================
 window.moduleInit = function() {
     console.log('ROS-AI 指挥官模块初始化...');
 
-    // 初始化事件监听
+    // Register DOM event listeners
     initEventListeners();
 
-    // 检查 turtlesim 状态并初始化
+    // Probe turtlesim availability before enabling the UI
     checkTurtlesimStatus();
 };
 
-// ==================== 模块卸载 ====================
+// ==================== Module teardown ====================
 window.moduleCleanup = function() {
     console.log('ROS-AI 指挥官模块卸载...');
 
-    // 清除定时器
+    // Clear polling timers to avoid leaks
     if (window.statusCheckInterval) {
         clearInterval(window.statusCheckInterval);
         window.statusCheckInterval = null;
     }
 
-    // 关闭 WebSocket 连接
+    // Close any active WebSocket connection
     if (wsConnection) {
         wsConnection.close();
         wsConnection = null;
@@ -51,17 +51,17 @@ window.moduleCleanup = function() {
 
 };
 
-// ==================== Turtlesim 状态检查 ====================
+// ==================== Turtlesim status checks ====================
 function checkTurtlesimStatus() {
     fetch('/api/ros/turtlesim/status')
         .then(response => response.json())
         .then(data => {
             if (data.success && data.status.is_running) {
-                // Turtlesim 正在运行
+                // Turtlesim is already running
                 turtlesimRunning = true;
                 onTurtlesimReady();
             } else {
-                // Turtlesim 未运行，显示启动提示
+                // Turtlesim is stopped; show the startup prompt
                 turtlesimRunning = false;
                 showTurtlesimStartPrompt();
                 stopVideoStream(true);
@@ -84,7 +84,7 @@ function showTurtlesimStartPrompt() {
         $('#btn-start-turtlesim').show().prop('disabled', false);
         $('#prompt-status').hide();
     } else {
-        // 在界面上显示启动提示
+        // Inject the startup prompt card into the layout
         $('.ai-commander-container').prepend(`
             <div class="turtlesim-prompt" id="turtlesim-prompt">
                 <div class="prompt-card">
@@ -105,12 +105,11 @@ function showTurtlesimStartPrompt() {
             </div>
         `);
 
-        // 绑定启动按钮事件
+        // Attach click handler for the launch action
         $('#btn-start-turtlesim').on('click', startTurtlesim);
     }
 
-    // 在界面上显示启动提示
-    // 禁用主要功能
+    // Ensure the prompt is visible and suspend primary controls
     $('#btn-send').prop('disabled', true);
     $('#chat-input').prop('disabled', true);
 }
@@ -119,12 +118,12 @@ function startTurtlesim() {
     const $btn = $('#btn-start-turtlesim');
     const $status = $('#prompt-status');
 
-    // 显示状态
+    // Update the prompt to reflect the current action
     $btn.hide();
     $status.show();
     $status.html('<i class="bi bi-hourglass-split"></i><span>正在启动进程...</span>');
 
-    // 设置较长的超时时间（30秒），因为启动可能需要时间
+    // Allow up to 30 seconds for turtlesim to start before aborting
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 30000);
 
@@ -162,7 +161,7 @@ function startTurtlesim() {
     })
     .then(data => {
         if (data.success) {
-            // 启动成功
+            // Startup succeeded
             $status.html('<i class="bi bi-check-circle"></i><span>启动成功！</span>');
 
             setTimeout(() => {
@@ -203,17 +202,17 @@ function startTurtlesim() {
 function onTurtlesimReady() {
     turtlesimRunning = true;
 
-    // 启用功能
+    // Re-enable conversation controls
     $('#btn-send').prop('disabled', false);
     $('#chat-input').prop('disabled', false);
 
-    // 初始化 WebSocket
+    // Start the WebSocket bridge for telemetry
     initWebSocket();
 
-    // 检查连接状态
+    // Refresh status indicators immediately
     checkConnectionStatus();
 
-    // 定期检查连接状态
+    // Schedule periodic status checks
     window.statusCheckInterval = setInterval(checkConnectionStatus, 10000);
 
     updateVideoStatus('connecting', '视频连接中...');
@@ -224,12 +223,12 @@ function onTurtlesimReady() {
     addLog('success', 'Turtlesim 已就绪，可以开始控制了！');
 }
 
-// ==================== 事件监听初始化 ====================
+// ==================== Event wiring ====================
 function initEventListeners() {
-    // 发送按钮
+    // Send button click
     $('#btn-send').on('click', sendMessage);
 
-    // 输入框回车发送（Shift+Enter换行）
+    // Submit on Enter; keep Shift+Enter for newlines
     $('#chat-input').on('keydown', function(e) {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
@@ -237,33 +236,33 @@ function initEventListeners() {
         }
     });
 
-    // 示例命令点击
+    // Sample command shortcuts
     $(document).on('click', '.example-cmd', function() {
         const command = $(this).text().replace(/["""]/g, '');
         $('#chat-input').val(command);
         $('#chat-input').focus();
     });
 
-    // 清空对话
+    // Conversation reset
     $('#btn-clear-chat').on('click', clearChat);
 
-    // 复制 JSON
+    // Copy JSON payload
     $('#btn-copy-json').on('click', copyJson);
 
-    // 日志控制
+    // Log panel controls
     $('#btn-toggle-autoscroll').on('click', toggleAutoScroll);
     $('#btn-clear-logs').on('click', clearLogs);
 
-    // 视频刷新
+    // Manual video reconnect
     $('#btn-video-reload').on('click', function() {
         addLog('info', '手动发起视频重新连接');
         startVideoStream(true);
     });
 }
 
-// ==================== 检查连接状态 ====================
+// ==================== Status polling ====================
 function checkConnectionStatus() {
-    // 检查 AI 状态
+    // Query AI backend status
     fetch('/api/ros/ai/status')
         .then(response => response.json())
         .then(data => {
@@ -274,7 +273,7 @@ function checkConnectionStatus() {
             updateStatus('ai', 'error', 'AI 离线');
         });
 
-    // 检查 ROS 状态
+    // Probe turtlesim process state
     fetch('/api/ros/turtlesim/status')
         .then(response => response.json())
         .then(data => {
@@ -314,7 +313,7 @@ function updateStatus(type, state, text) {
     $indicator.find('.status-text').text(text);
 }
 
-// ==================== AI 对话功能 ====================
+// ==================== AI conversation workflow ====================
 function sendMessage() {
     const $input = $('#chat-input');
     const message = $input.val().trim();
@@ -324,19 +323,19 @@ function sendMessage() {
     const $chatPanel = $('.panel-chat');
     $chatPanel.addClass('is-busy');
 
-    // 添加用户消息到界面
+    // Render the user message in the chat panel
     addChatMessage('user', message);
 
-    // 清空输入框
+    // Reset the input field
     $input.val('');
 
-    // 禁用发送按钮
+    // Prevent duplicate submissions
     $('#btn-send').prop('disabled', true);
 
-    // 添加 AI 思考提示
+    // Show a temporary AI thinking indicator
     const thinkingId = addChatMessage('ai', '正在处理您的指令...', true);
 
-    // 发送到后端 AI API
+    // Dispatch the command to the backend AI endpoint
     fetch('/api/ros/ai/command', {
         method: 'POST',
         headers: {
@@ -344,38 +343,38 @@ function sendMessage() {
         },
         body: JSON.stringify({
             message: message,
-            history: messageHistory.slice(-5) // 发送最近5条历史
+            history: messageHistory.slice(-5) // include the most recent five exchanges
         })
     })
     .then(response => response.json())
     .then(data => {
-        // 移除思考提示
+        // Remove the temporary placeholder
         $(`#${thinkingId}`).remove();
 
-        // 添加 AI 回复
+        // Display the AI response
         addChatMessage('ai', data.reply || '指令已发送');
 
-        // 更新 JSON 显示
+        // Update the JSON preview pane
         if (data.command) {
             updateJsonDisplay(data.command);
         }
 
-        // 添加日志
+        // Write a success log entry
         addLog('success', `AI 指令已执行: ${message.substring(0, 50)}...`);
     })
     .catch(error => {
         console.error('发送消息失败:', error);
 
-        // 移除思考提示
+        // Remove the temporary placeholder
         $(`#${thinkingId}`).remove();
 
-        // 添加错误消息
+        // Show an error message in the chat
         addChatMessage('ai', '抱歉，处理您的指令时出现错误。请稍后重试。');
 
         addLog('error', '发送指令失败: ' + error.message);
     })
     .finally(() => {
-        // 启用发送按钮
+        // Restore the send controls
         $('#btn-send').prop('disabled', false);
         $chatPanel.removeClass('is-busy');
     });
@@ -384,7 +383,7 @@ function sendMessage() {
 function addChatMessage(sender, content, isTemporary = false) {
     const $messages = $('#chat-messages');
 
-    // 移除欢迎消息
+    // Drop the welcome prompt once conversation begins
     $('.chat-welcome').remove();
 
     const timestamp = new Date().toLocaleTimeString('zh-CN', {
@@ -416,10 +415,10 @@ function addChatMessage(sender, content, isTemporary = false) {
 
     $messages.append($message);
 
-    // 滚动到底部
+    // Ensure the latest message is visible
     $messages.scrollTop($messages[0].scrollHeight);
 
-    // 保存到历史记录（非临时消息）
+    // Persist permanent messages for conversation context
     if (!isTemporary) {
         messageHistory.push({
             role: sender === 'user' ? 'user' : 'assistant',
@@ -443,7 +442,7 @@ function clearChat() {
     messageHistory = [];
 }
 
-// ==================== JSON 显示功能 ====================
+// ==================== JSON display helpers ====================
 function updateJsonDisplay(data) {
     const $display = $('#json-display code');
 
@@ -451,7 +450,7 @@ function updateJsonDisplay(data) {
         const formatted = JSON.stringify(data, null, 2);
         $display.text(formatted);
 
-        // 高亮显示
+        // Apply a short-lived highlight effect
         highlightJson($display);
 
         const $panel = $('.panel-json');
@@ -472,19 +471,19 @@ function updateJsonDisplay(data) {
 }
 
 function highlightJson($element) {
-    // 简单的 JSON 语法高亮
+    // Lightweight JSON syntax highlighting
     let html = $element.text();
 
-    // 高亮键名
+    // Highlight property names
     html = html.replace(/"([^"]+)":/g, '<span style="color: #60a5fa;">"$1"</span>:');
 
-    // 高亮字符串值
+    // Highlight string values
     html = html.replace(/: "([^"]*)"/g, ': <span style="color: #34d399;">"$1"</span>');
 
-    // 高亮数字
+    // Highlight numeric literals
     html = html.replace(/: (\d+\.?\d*)/g, ': <span style="color: #f472b6;">$1</span>');
 
-    // 高亮布尔值
+    // Highlight boolean literals
     html = html.replace(/: (true|false)/g, ': <span style="color: #fbbf24;">$1</span>');
 
     $element.html(html);
@@ -495,7 +494,7 @@ function copyJson() {
 
     navigator.clipboard.writeText(text)
         .then(() => {
-            // 显示复制成功提示
+            // Briefly swap the icon to acknowledge success
             const $btn = $('#btn-copy-json');
             const originalHtml = $btn.html();
             $btn.html('<i class="bi bi-check"></i>');
@@ -520,7 +519,7 @@ function scrollLogsToBottom() {
     element.scrollTop = element.scrollHeight - element.clientHeight;
 }
 
-// ==================== 日志功能 ====================
+// ==================== Logging ====================
 function addLog(type, message, data = null, options = {}) {
     const $logs = $('#log-messages');
     const { flashOnDuplicate = true } = options;
@@ -564,14 +563,14 @@ function addLog(type, message, data = null, options = {}) {
     $logs.append($entry);
     lastLogSnapshot = { key: entryKey, $el: $entry };
 
-    // 限制日志条数（最多 500 条）
+    // Keep at most 500 entries in the log buffer
     const maxLogs = 500;
     const $entries = $logs.find('.log-entry');
     if ($entries.length > maxLogs) {
         $entries.slice(0, $entries.length - maxLogs).remove();
     }
 
-    // 自动滚动
+    // Auto-scroll when enabled by the user
     if (autoScroll) {
         requestAnimationFrame(scrollLogsToBottom);
     }
@@ -580,7 +579,7 @@ function addLog(type, message, data = null, options = {}) {
 function flashLogEntry($entry) {
     if (!$entry || !$entry.length) return;
     $entry.removeClass('log-flash');
-    // 触发重绘以重置动画
+    // Force a reflow so the CSS animation restarts
     // eslint-disable-next-line no-unused-expressions
     $entry[0].offsetHeight;
     $entry.addClass('log-flash');
@@ -615,7 +614,7 @@ function clearLogs() {
     }
 }
 
-// ==================== 视频流 ====================
+// ==================== Video stream management ====================
 function updateVideoStatus(state, text) {
     const $status = $('#video-status');
     if (!$status.length) return;
@@ -758,9 +757,9 @@ function startVideoStream(forceReload = false) {
     $img.attr('src', streamUrl);
 }
 
-// ==================== WebSocket 连接 ====================
+// ==================== WebSocket bridge ====================
 function initWebSocket() {
-    // 构建 WebSocket URL
+    // Build the WebSocket URL based on current protocol
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const wsUrl = `${protocol}//${window.location.host}/api/ros/ws/turtle`;
 
@@ -790,7 +789,7 @@ function initWebSocket() {
             console.log('WebSocket 连接已关闭');
             addLog('warning', 'WebSocket 连接已关闭');
 
-            // 5 秒后尝试重连
+            // Attempt reconnection five seconds after an unexpected close
             if (turtlesimRunning) {
                 setTimeout(() => {
                     initWebSocket();
@@ -804,42 +803,42 @@ function initWebSocket() {
 }
 
 function handleWebSocketMessage(data) {
-    // 根据消息类型处理
+    // Route messages according to their declared type
     switch (data.type) {
         case 'pose':
-            // 小乌龟位姿数据 - 后端已做变化检测，前端直接显示
+            // Turtlesim pose changes; backend already filters duplicates
             addLog('info', `位置: (${data.x?.toFixed(2)}, ${data.y?.toFixed(2)}), 角度: ${data.theta?.toFixed(2)}rad, ` +
                           `速度: ${data.linear_velocity?.toFixed(2)} m/s`);
             break;
 
         case 'velocity':
-            // 速度数据 - 只在非零时显示
+            // Velocity updates; ignore near-zero noise
             if (Math.abs(data.linear) > 0.01 || Math.abs(data.angular) > 0.01) {
                 addLog('info', `线速度: ${data.linear?.toFixed(2)} m/s, 角速度: ${data.angular?.toFixed(2)} rad/s`);
             }
             break;
 
         case 'status':
-            // 状态更新
+            // Informational status message
             addLog('success', data.message);
             break;
 
         case 'error':
-            // 错误消息
+            // Error notification from backend
             addLog('error', data.message);
             break;
 
         case 'ping':
-            // 心跳消息，静默处理
+            // Heartbeat messages are ignored
             break;
 
         default:
-            // 其他消息
+            // Fallback handling for unexpected payloads
             console.log('收到 WebSocket 消息:', data);
     }
 }
 
-// ==================== 工具函数 ====================
+// ==================== Utility helpers ====================
 function formatTimestamp(timestamp) {
     const date = new Date(timestamp);
     return date.toLocaleTimeString('zh-CN', {
@@ -849,5 +848,5 @@ function formatTimestamp(timestamp) {
     });
 }
 
-// ==================== 初始化完成 ====================
+// ==================== Bootstrap complete ====================
 console.log('ROS-AI 指挥官模块脚本加载完成');

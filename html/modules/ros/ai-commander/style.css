@@ -1,4 +1,4 @@
-/* ==================== ROS-AI 指挥官 ==================== */
+/* ==================== ROS AI Commander layout ==================== */
 :root {
     --panel-chat-accent: #6366f1;
     --panel-chat-accent-soft: rgba(99, 102, 241, 0.16);
@@ -20,7 +20,7 @@
     padding: 0;
 }
 
-/* ==================== 头部 ==================== */
+/* ==================== Header ==================== */
 .commander-header {
     display: flex;
     align-items: center;
@@ -127,7 +127,7 @@
     color: #065f46;
 }
 
-/* ==================== 主体布局 ==================== */
+/* ==================== Main layout ==================== */
 .commander-layout {
     flex: 1;
     display: flex;
@@ -203,7 +203,7 @@
     min-height: 0;
 }
 
-/* ==================== Panel Variations ==================== */
+/* ==================== Panel tone variations ==================== */
 .panel-chat {
     background: linear-gradient(180deg, rgba(99, 102, 241, 0.12) 0%, rgba(129, 140, 248, 0.04) 100%);
     border: 1px solid rgba(99, 102, 241, 0.18);
@@ -535,7 +535,7 @@
     border-left-color: rgba(239, 68, 68, 0.55);
 }
 
-/* ==================== 视频面板 ==================== */
+/* ==================== Video panel ==================== */
 .panel-video .panel-body {
     gap: 16px;
 }
@@ -637,7 +637,7 @@
     color: var(--text-tertiary);
 }
 
-/* ==================== 对话区 ==================== */
+/* ==================== Chat panel ==================== */
 .chat-messages {
     flex: 1;
     overflow-y: auto;
@@ -847,7 +847,7 @@
     transform: none;
 }
 
-/* ==================== JSON 面板 ==================== */
+/* ==================== JSON panel ==================== */
 .json-display {
     flex: 1;
     overflow: auto;
@@ -884,7 +884,7 @@
     border-color: var(--gray-400);
 }
 
-/* ==================== 日志面板 ==================== */
+/* ==================== Log panel ==================== */
 .btn-log-control {
     padding: 8px 12px;
     background: var(--bg-primary);
@@ -971,7 +971,7 @@
     flex: 1;
 }
 
-/* ==================== 滚动条 ==================== */
+/* ==================== Scrollbars ==================== */
 .chat-messages::-webkit-scrollbar,
 .json-display::-webkit-scrollbar,
 .log-messages::-webkit-scrollbar {
@@ -991,7 +991,7 @@
     background: var(--gray-400);
 }
 
-/* ==================== Loading ==================== */
+/* ==================== Loading states ==================== */
 .loading-indicator {
     display: inline-flex;
     gap: 4px;
@@ -1043,7 +1043,7 @@
     }
 }
 
-/* ==================== 响应式 ==================== */
+/* ==================== Responsive adjustments ==================== */
 @media (max-width: 1024px) {
     .commander-header {
         flex-direction: column;
@@ -1123,7 +1123,7 @@
     }
 }
 
-/* ==================== Turtlesim 启动提示 ==================== */
+/* ==================== Turtlesim startup prompt ==================== */
 .turtlesim-prompt {
     position: fixed;
     inset: 0;

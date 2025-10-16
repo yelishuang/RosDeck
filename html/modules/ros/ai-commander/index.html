@@ -1,6 +1,6 @@
-<!-- ROS-AI 指挥官界面 -->
+<!-- Container for the ROS AI Commander module -->
 <div class="ai-commander-container">
-    <!-- 标题栏 -->
+    <!-- Header bar with module title and status indicators -->
     <div class="commander-header">
         <div class="header-left">
             <div class="header-icon">
@@ -23,10 +23,10 @@
         </div>
     </div>
 
-    <!-- 主内容区域 - 2x2 网格布局 -->
+    <!-- Main content arranged as a two-by-two grid of panels -->
     <div class="commander-layout">
         <div class="commander-row row-top">
-            <!-- 左上：AI 对话区 -->
+            <!-- Upper-left panel: conversational interface with the AI -->
             <section class="panel panel-chat">
                 <div class="panel-header">
                     <div class="panel-title">
@@ -64,7 +64,7 @@
             </div>
             </section>
 
-            <!-- 右上：JSON 指令显示区 -->
+            <!-- Upper-right panel: JSON representation of the AI command -->
             <section class="panel panel-json">
                 <div class="panel-header">
                     <div class="panel-title">
@@ -84,7 +84,7 @@
             </section>
         </div>
 
-        <!-- 左下：实时视频 -->
+        <!-- Lower-left panel: live turtlesim video stream -->
         <div class="commander-row row-bottom">
             <section class="panel panel-video">
                 <div class="panel-header">
@@ -121,7 +121,7 @@
             </div>
             </section>
 
-            <!-- 右下：持续消息日志区 -->
+            <!-- Lower-right panel: continuous motion log output -->
             <section class="panel panel-logs">
                 <div class="panel-header">
                     <div class="panel-title">

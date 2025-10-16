@@ -1,20 +1,18 @@
 /**
- * 概览页面逻辑
- * 负责显示系统概览信息和 ROS 统计数据
+ * Overview module logic for system and ROS statistics.
  */
-
-// ==================== 模块初始化 ====================
+// Module initialization
 window.moduleInit = function() {
     console.log('概览模块初始化...');
     
-    // 首次加载数据
+    // Load initial data
     loadOverviewData();
     
-    // 每 5 秒更新一次
+    // Refresh every five seconds
     window.overviewInterval = setInterval(loadOverviewData, 5000);
 };
 
-// ==================== 加载概览数据 ====================
+// Load overview data
 function loadOverviewData() {
     fetchRosStats()
         .then(updateRosStats)
@@ -23,7 +21,7 @@ function loadOverviewData() {
         });
 }
 
-// ==================== 获取 ROS 统计数据 ====================
+// Fetch ROS statistics
 function fetchRosStats() {
     return fetch('/api/ros/stats')
         .then(response => {
@@ -34,7 +32,7 @@ function fetchRosStats() {
         })
         .catch(error => {
             console.error('获取 ROS 统计失败:', error);
-            // 返回默认值
+            // Provide fallback values
             return {
                 active_nodes: 0,
                 topics_count: 0,
@@ -46,7 +44,7 @@ function fetchRosStats() {
         });
 }
 
-// ==================== 更新 ROS 统计显示 ====================
+// Update ROS metrics display
 function updateRosStats(data = {}) {
   const toNum = v => {
     const n = Number(v);
@@ -73,19 +71,18 @@ function updateRosStats(data = {}) {
   console.log('ROS 统计已更新:', data);
 }
 
-
-// ==================== 模块卸载清理 ====================
+// Module teardown
 window.moduleCleanup = function() {
     console.log('概览模块卸载...');
     
-    // 清除定时器
+    // Clear polling interval
     if (window.overviewInterval) {
         clearInterval(window.overviewInterval);
         window.overviewInterval = null;
     }
 };
 
-// ==================== 快速操作卡片点击 ====================
+// Quick action handlers
 $(document).on('click', '.action-card', function() {
     const target = $(this).data('target');
     if (target && typeof loadModule === 'function') {
@@ -93,7 +90,7 @@ $(document).on('click', '.action-card', function() {
     }
 });
 
-// ==================== 快速开始按钮 ====================
+// Quick start button
 $(document).on('click', '.quick-start-btn', function() {
     if (typeof loadModule === 'function') {
         loadModule('ros/overview');

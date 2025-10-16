@@ -1,6 +1,6 @@
 /**
- * ROS 概览模块
- * WebSocket实时监控ROS图谱变化
+ * ROS overview module.
+ * Streams ROS graph changes over WebSocket in real time.
  */
 
 (function() {
@@ -8,7 +8,7 @@
     let reconnectTimer = null;
     let heartbeatTimer = null;
 
-    // 数据存储
+    // In-memory state cache
     const state = {
         nodes: new Map(),
         topics: new Map(),
@@ -18,7 +18,7 @@
             topics: new Set(),
             services: new Set()
         },
-        expandedTopics: new Set(), // 展开的话题详情
+        expandedTopics: new Set(), // tracks topics with expanded detail panes
         searchFilters: {
             nodes: '',
             topics: '',
@@ -49,7 +49,7 @@
      * 初始化事件监听
      */
     function initEventListeners() {
-        // 搜索框
+        // Attach search filters
         $('#nodes-search').on('input', (e) => {
             state.searchFilters.nodes = e.target.value.toLowerCase();
             renderNodes();
@@ -102,7 +102,7 @@
             console.log('WebSocket 已断开');
             updateConnectionStatus('disconnected');
             stopHeartbeat();
-            // 5秒后重连
+            // Attempt reconnection after five seconds
             reconnectTimer = setTimeout(() => {
                 console.log('尝试重新连接...');
                 connectWebSocket();
@@ -128,7 +128,7 @@
             if (ws && ws.readyState === WebSocket.OPEN) {
                 ws.send(JSON.stringify({ type: 'pong' }));
             }
-        }, 30000); // 30秒心跳
+        }, 30000); // 30-second heartbeat
     }
 
     /**
@@ -161,7 +161,7 @@
                 handleBookmarkUpdated(data);
                 break;
             case 'ping':
-                // 心跳
+                // Respond to heartbeat probes
                 ws.send(JSON.stringify({ type: 'pong' }));
                 break;
             case 'error':
@@ -178,42 +178,42 @@
     function handleFullData(data) {
         console.log('处理全量数据');
 
-        // 更新系统信息
+        // Refresh system summary fields
         if (data.system_info) {
             $('#ros-version').text(data.system_info.ros_version || '-');
             $('#dds-impl').text(data.system_info.dds_impl || '-');
             $('#domain-id').text(data.system_info.domain_id || '-');
         }
 
-        // 更新节点
+        // Replace node snapshot
         state.nodes.clear();
         (data.nodes || []).forEach(node => {
             state.nodes.set(node.full_name, node);
         });
 
-        // 更新话题
+        // Replace topic snapshot
         state.topics.clear();
         (data.topics || []).forEach(topic => {
             state.topics.set(topic.name, topic);
         });
 
-        // 更新服务
+        // Replace service snapshot
         state.services.clear();
         (data.services || []).forEach(service => {
             state.services.set(service.name, service);
         });
 
-        // 更新标记
+        // Sync bookmark sets
         if (data.bookmarks) {
             state.bookmarks.nodes = new Set(data.bookmarks.nodes || []);
             state.bookmarks.topics = new Set(data.bookmarks.topics || []);
             state.bookmarks.services = new Set(data.bookmarks.services || []);
         }
 
-        // 更新时间
+        // Update last refresh timestamp
         updateLastUpdateTime(data.timestamp);
 
-        // 渲染
+        // Re-render lists
         renderAll();
     }
 
@@ -223,28 +223,28 @@
     function handleDeltaData(data) {
         console.log('处理增量数据');
 
-        // 添加节点
+        // Add nodes
         if (data.added_nodes) {
             data.added_nodes.forEach(node => {
                 state.nodes.set(node.full_name, node);
             });
         }
 
-        // 删除节点
+        // Remove nodes
         if (data.removed_nodes) {
             data.removed_nodes.forEach(nodeName => {
                 state.nodes.delete(nodeName);
             });
         }
 
-        // 添加话题
+        // Add topics
         if (data.added_topics) {
             data.added_topics.forEach(topic => {
                 state.topics.set(topic.name, topic);
             });
         }
 
-        // 删除话题
+        // Remove topics
         if (data.removed_topics) {
             data.removed_topics.forEach(topicName => {
                 state.topics.delete(topicName);
@@ -252,31 +252,31 @@
             });
         }
 
-        // 更新话题
+        // Update topics
         if (data.updated_topics) {
             data.updated_topics.forEach(topic => {
                 state.topics.set(topic.name, topic);
             });
         }
 
-        // 添加服务
+        // Add services
         if (data.added_services) {
             data.added_services.forEach(service => {
                 state.services.set(service.name, service);
             });
         }
 
-        // 删除服务
+        // Remove services
         if (data.removed_services) {
             data.removed_services.forEach(serviceName => {
                 state.services.delete(serviceName);
             });
         }
 
-        // 更新时间
+        // Update last refresh timestamp
         updateLastUpdateTime(data.timestamp);
 
-        // 渲染
+        // Re-render lists
         renderAll();
     }
 
@@ -288,13 +288,13 @@
         const details = data.details;
 
         if (details && state.topics.has(topicName)) {
-            // 更新话题数据
+            // Augment topic data with fetched details
             const topic = state.topics.get(topicName);
             topic.publishers = details.publishers || [];
             topic.subscribers = details.subscribers || [];
             state.topics.set(topicName, topic);
 
-            // 重新渲染话题详情
+            // Refresh the expanded topic view
             renderTopicDetails(topicName);
         }
     }
@@ -308,7 +308,7 @@
             state.bookmarks.topics = new Set(data.bookmarks.topics || []);
             state.bookmarks.services = new Set(data.bookmarks.services || []);
 
-            // 重新渲染
+            // Refresh all sections
             renderAll();
             toastr.success('标记已更新');
         }
@@ -340,7 +340,7 @@
         const container = $('#nodes-list');
         const filter = state.searchFilters.nodes;
 
-        // 过滤和排序
+        // Filter and sort nodes
         let nodes = Array.from(state.nodes.values());
 
         if (filter) {
@@ -350,7 +350,7 @@
             );
         }
 
-        // 置顶标记的节点
+        // Promote bookmarked entries to the top
         nodes.sort((a, b) => {
             const aBookmarked = state.bookmarks.nodes.has(a.full_name);
             const bBookmarked = state.bookmarks.nodes.has(b.full_name);
@@ -412,7 +412,7 @@
         const container = $('#topics-list');
         const filter = state.searchFilters.topics;
 
-        // 过滤和排序
+        // Filter and sort topics
         let topics = Array.from(state.topics.values());
 
         if (filter) {
@@ -422,7 +422,7 @@
             );
         }
 
-        // 置顶标记的话题
+        // Promote bookmarked topics
         topics.sort((a, b) => {
             const aBookmarked = state.bookmarks.topics.has(a.name);
             const bBookmarked = state.bookmarks.topics.has(b.name);
@@ -542,7 +542,7 @@
         const container = $('#services-list');
         const filter = state.searchFilters.services;
 
-        // 过滤和排序
+        // Filter and sort services
         let services = Array.from(state.services.values());
 
         if (filter) {
@@ -552,7 +552,7 @@
             );
         }
 
-        // 置顶标记的服务
+        // Promote bookmarked services
         services.sort((a, b) => {
             const aBookmarked = state.bookmarks.services.has(a.name);
             const bBookmarked = state.bookmarks.services.has(b.name);
@@ -626,16 +626,16 @@
         const isExpanded = state.expandedTopics.has(topicName);
 
         if (isExpanded) {
-            // 收起
+            // Collapse detail view
             state.expandedTopics.delete(topicName);
             $(`#topic-details-${sanitizeId(topicName)}`).slideUp();
         } else {
-            // 展开
+            // Expand detail view
             state.expandedTopics.add(topicName);
             const detailsContainer = $(`#topic-details-${sanitizeId(topicName)}`);
             detailsContainer.slideDown();
 
-            // 如果没有详细数据，请求获取
+            // Fetch detail payload when it is not cached
             const topic = state.topics.get(topicName);
             if (topic && !topic.publishers && !topic.subscribers) {
                 if (ws && ws.readyState === WebSocket.OPEN) {

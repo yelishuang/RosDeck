@@ -1,9 +1,9 @@
 /**
- * RosDeck 主页面逻辑
- * 负责页面切换、状态更新、用户交互等功能
+ * Core UI controller for the RosDeck dashboard.
+ * Manages module navigation, user interactions, and periodic status refreshes.
  */
 
-// ==================== 全局变量 ====================
+// Global state shared across modules.
 let currentModule = 'overview';
 let adminModeActive = false;
 let adminModePending = false;
@@ -18,44 +18,44 @@ const STORAGE_KEYS = {
     csrf: 'rosdeck_csrf_token'
 };
 
-// ==================== 页面加载完成 ====================
+// Bootstrap the dashboard when the DOM is ready.
 $(document).ready(function() {
     console.log('RosDeck 初始化...');
 
-    // 同步 CSRF Token（如从登录页传递）
+    // Ensure the CSRF token is carried over from the login flow.
     ensureCsrfToken().catch(err => {
         console.error('初始化 CSRF Token 失败:', err);
     });
     
-    // 初始化各个模块
+    // Initialize shared UI shells.
     initSidebar();
     initTopBar();
     initStatusRibbon();
     initContentArea();
     
-    // 加载默认页面（概览）
+    // Default to the overview module.
     loadModule('overview');
     
-    // 启动状态更新定时器
+    // Start periodic refresh tasks.
     startStatusUpdate();
     startDeviceInfoUpdates();
 });
 
-// ==================== 侧边栏功能 ====================
+// Sidebar navigation and power controls.
 function initSidebar() {
-    // 侧边栏菜单点击事件
+    // Register handlers for module navigation.
     $('.submenu-item').on('click', function() {
         const modulePath = $(this).data('module');
         if (modulePath) {
             loadModule(modulePath);
             
-            // 更新激活状态
+            // Reflect selection in the sidebar.
             $('.submenu-item').removeClass('active');
             $(this).addClass('active');
         }
     });
     
-    // 重启/关机按钮悬停控制
+    // Manage hover behavior for the power dropdown.
     let powerMenuTimeout;
     
     $('.power-btn').on('mouseenter', function() {
@@ -66,10 +66,10 @@ function initSidebar() {
     $('.power-btn').on('mouseleave', function() {
         powerMenuTimeout = setTimeout(function() {
             $('.power-dropdown').stop().fadeOut(200);
-        }, 300); // 300ms 延迟，给用户时间移动鼠标
+        }, 300); // Keep the menu open briefly to allow cursor travel.
     });
     
-    // 重启/关机选项点击
+    // Trigger restart or shutdown actions for the selected option.
     $('.power-option').on('click', function(e) {
         e.stopPropagation();
         const action = $(this).data('action');
@@ -77,82 +77,82 @@ function initSidebar() {
         handlePowerAction(action);
     });
     
-    // 设备ID编辑功能（预留）
+    // Placeholder hook for editing the device identifier.
     $('.btn-edit').on('click', function() {
         if ($(this).data('editable') === 'true') {
-            // TODO: 实现设备ID编辑功能
+            // TODO: Implement device identifier editing.
             console.log('设备ID编辑功能待实现');
         }
     });
 }
 
-// ==================== 顶部栏功能 ====================
+// Top bar notifications and admin toggle.
 function initTopBar() {
-    // 通知按钮
+    // Placeholder wiring for notifications.
     $('.notification-btn').on('click', function() {
-        // TODO: 显示通知面板
+        // TODO: Render the notification panel.
         console.log('通知功能待实现');
         toastr.info('通知功能开发中...', '提示');
     });
     
-    // 用户卡片点击
+    // Placeholder for user account menu.
     $('.user-card').on('click', function() {
-        // TODO: 显示用户菜单
+        // TODO: Implement the user account dropdown.
         console.log('用户菜单待实现');
     });
     
-    // 管理员模式切换
+    // Toggle admin mode state.
     $('.admin-mode-toggle').on('click', function() {
         toggleAdminMode();
     });
 }
 
-// ==================== 状态栏功能 ====================
+// Status ribbon setup.
 function initStatusRibbon() {
-    // 初始化完成，等待定时更新
+    // Initialization is passive; recurring updates run elsewhere.
     console.log('状态栏初始化完成');
 }
 
-// 启动状态更新
+// Begin periodic system status polling.
 function startStatusUpdate() {
-    // 首次更新
+    // Perform an immediate update.
     updateSystemStatus();
     
-    // 每5秒更新一次
+    // Schedule five-second polling.
     statusUpdateInterval = setInterval(updateSystemStatus, 5000);
 }
 
-// 更新系统状态
+// Refresh dashboard metrics.
 function updateSystemStatus() {
     fetch('/api/system/status')
         .then(response => response.json())
         .then(data => {
-            // 更新运行时间
+            // Update uptime display.
             const uptimeElement = $('#uptime-value');
             if (uptimeElement.length && data.uptime_seconds) {
                 const uptime = formatUptime(data.uptime_seconds);
                 uptimeElement.text(uptime);
             }
             
-            // 更新磁盘使用率
+            // Update disk usage display.
             const diskElement = $('#disk-value');
             if (diskElement.length && data.disk) {
                 diskElement.text(data.disk.usage_percent + '%');
             }
             
-            // 更新内存使用率
+            // Update memory usage display.
             const memoryElement = $('#memory-value');
             if (memoryElement.length && data.memory) {
                 memoryElement.text(data.memory.usage_percent + '%');
             }
             
-            // 更新 CPU 使用率
+            // Update CPU usage display.
             const cpuElement = $('#cpu-value');
             if (cpuElement.length && data.cpu) {
                 cpuElement.text(data.cpu.usage_percent + '%');
             }
             
-            // 更新网络速度
+            // Update network throughput display.
             const networkElement = $('#network-value');
             if (networkElement.length && data.network) {
                 networkElement.text(data.network.speed_mbps.toFixed(1) + ' Mbps');
@@ -175,7 +175,7 @@ function formatUptime(seconds) {
     }
 }
 
-// ==================== 设备信息 ====================
+// Device information polling.
 function startDeviceInfoUpdates() {
     if (deviceInfoInterval) {
         clearInterval(deviceInfoInterval);
@@ -246,44 +246,44 @@ function renderDeviceInfo(raw = {}) {
     console.log('设备信息已更新:', data);
 }
 
-// 更新运行时间
+// Placeholder helper for uptime display.
 function updateUptime() {
-    // TODO: 从后端获取真实的系统运行时间
-    // 这里仅作演示
+    // TODO: Replace mock uptime with backend data.
+    // Temporary placeholder until API integration is complete.
     const uptimeElement = $('#uptime-value');
     if (uptimeElement.length) {
-        // 模拟数据
+        // Mock value used as a placeholder.
         uptimeElement.text('3天 2小时');
     }
 }
 
-// ==================== 内容区功能 ====================
+// Content area interactions.
 function initContentArea() {
-    // 快速操作卡片点击事件（概览页面）
+    // Handle quick action cards on the overview module.
     $(document).on('click', '.action-card', function() {
         const target = $(this).data('target');
         if (target) {
             loadModule(target);
             
-            // 更新侧边栏激活状态
+            // Sync active state with the sidebar.
             updateSidebarActive(target);
         }
     });
     
-    // 快速开始按钮
+    // Shortcut to open the ROS overview.
     $(document).on('click', '.quick-start-btn', function() {
         loadModule('ros/overview');
         updateSidebarActive('ros/overview');
     });
 }
 
-// ==================== 模块加载 ====================
+// Dynamic module loading lifecycle.
 function loadModule(modulePath) {
     console.log(`加载模块: ${modulePath}`);
 
     const contentArea = $('.content-wrapper .content-area');
 
-    // 显示加载状态
+    // Show loading indicator.
     contentArea.html(`
         <div class="loading-container" style="display: flex; justify-content: center; align-items: center; min-height: 60vh;">
             <div class="spinner-border text-primary" role="status">
@@ -292,27 +292,27 @@ function loadModule(modulePath) {
         </div>
     `);
 
-    // 生成时间戳破解缓存
+    // Bust caches by appending a timestamp.
     const timestamp = Date.now();
     const moduleUrl = `modules/${modulePath}/index.html?t=${timestamp}`;
     const styleUrl = `modules/${modulePath}/style.css?t=${timestamp}`;
 
-    // 先加载样式
+    // Load the module stylesheet first.
     loadModuleStyle(styleUrl);
 
-    // 加载HTML内容
+    // Fetch and render the module markup.
     $.ajax({
         url: moduleUrl,
         type: 'GET',
-        cache: false,  // 禁用缓存
+        cache: false,  // Disable caching for module assets.
         success: function(data) {
             contentArea.html(data);
             currentModule = modulePath;
 
-            // 更新面包屑
+            // Update breadcrumb trail.
             updateBreadcrumb(modulePath);
 
-            // 加载模块JS（如果存在）
+            // Load module-specific script if present.
             loadModuleScript(modulePath);
 
             console.log(`模块 ${modulePath} 加载成功`);
@@ -331,12 +331,12 @@ function loadModule(modulePath) {
     });
 }
 
-// 加载模块样式
+// Load module stylesheet.
 function loadModuleStyle(styleUrl) {
-    // 移除之前加载的模块样式
+    // Remove any previously injected module stylesheet.
     $('link[data-module-style]').remove();
 
-    // 加载新样式（URL 已包含时间戳参数）
+    // Inject the new stylesheet (timestamp already appended).
     $('<link>')
         .attr('rel', 'stylesheet')
         .attr('href', styleUrl)
@@ -344,9 +344,9 @@ function loadModuleStyle(styleUrl) {
         .appendTo('head');
 }
 
-// 加载模块脚本
+// Load module script.
 function loadModuleScript(modulePath) {
-    // 生成时间戳破解缓存
+    // Bust caches when loading scripts.
     const timestamp = Date.now();
     const scriptUrl = `modules/${modulePath}/main.js?t=${timestamp}`;
 
@@ -355,30 +355,30 @@ function loadModuleScript(modulePath) {
         window.moduleCleanup = null;
     }
 
-    // 移除之前的模块脚本
+    // Remove any prior module script.
     $('script[data-module-script]').remove();
 
-    // 尝试加载新脚本
+    // Fetch and execute the new script.
     $.ajax({
         url: scriptUrl,
         dataType: 'script',
-        cache: false,  // 禁用缓存
+        cache: false,  // Disable caching for module scripts.
         success: function() {
             console.log(`模块脚本加载成功: ${scriptUrl}`);
 
-            // 如果模块有初始化函数，调用它
+            // Run the module initializer if provided.
             if (typeof window.moduleInit === 'function') {
                 window.moduleInit();
             }
         },
         error: function() {
-            // 脚本不存在是正常的，不报错
+            // Missing scripts are expected for static modules.
             console.log(`模块无脚本文件: ${scriptUrl}`);
         }
     });
 }
 
-// 更新面包屑导航
+// Update breadcrumb navigation.
 function updateBreadcrumb(modulePath) {
     const moduleNames = {
         'overview': '概览',
@@ -398,19 +398,19 @@ function updateBreadcrumb(modulePath) {
     $('.trail-current').text(moduleName);
 }
 
-// 更新侧边栏激活状态
+// Update sidebar active module state.
 function updateSidebarActive(modulePath) {
     $('.submenu-item').removeClass('active');
     $(`.submenu-item[data-module="${modulePath}"]`).addClass('active');
 }
 
-// ==================== 管理员模式 ====================
+// Admin mode lifecycle.
 function toggleAdminMode() {
     if (!adminModeActive) {
-        // 激活管理员模式，需要输入密码
+        // Prompt for admin credentials before activation.
         promptAdminPassword();
     } else {
-        // 退出管理员模式
+        // Attempt to sign out of admin mode.
         deactivateAdminMode().catch(err => {
             console.error('退出管理员模式失败:', err);
         });
@@ -418,8 +418,8 @@ function toggleAdminMode() {
 }
 
 async function promptAdminPassword() {
-    // TODO: 实现密码输入对话框
-    // 这里暂时用简单的 prompt 演示
+    // TODO: Replace prompt with a secure password dialog.
+    // Temporary placeholder using the native prompt.
     const password = prompt('请输入管理员密码 (root 密码):');
     
     if (!password) {
@@ -473,7 +473,7 @@ async function verifyAdminPassword(password) {
 function activateAdminMode() {
     adminModeActive = true;
     
-    // 更新UI
+    // Update UI to reflect active admin mode.
     $('.admin-mode-toggle').addClass('active');
     $('.label-text').text('管理员');
     $('.label-status').text('已激活');
@@ -521,7 +521,7 @@ async function deactivateAdminMode() {
 
         adminModeActive = false;
         
-        // 更新UI
+        // Update UI to reflect deactivated admin mode.
         $('.admin-mode-toggle').removeClass('active');
         $('.label-text').text('管理员');
         $('.label-status').text('未激活');
@@ -545,7 +545,7 @@ async function deactivateAdminMode() {
     }
 }
 
-// ==================== 电源操作 ====================
+// Power management actions.
 async function handlePowerAction(action) {
     const actionText = action === 'restart' ? '重启系统' : '关闭系统';
     
@@ -605,19 +605,19 @@ async function handlePowerAction(action) {
     }
 }
 
-// ==================== 响应式菜单 ====================
+// Responsive sidebar helpers.
 function toggleSidebar() {
     $('.sidebar').toggleClass('open');
 }
 
-// 移动端菜单按钮（如需要可在HTML中添加）
+// Allow mobile toggles to open the sidebar.
 $(document).on('click', '.menu-toggle', function() {
     toggleSidebar();
 });
 
-// ==================== 清理函数 ====================
+// Cleanup handlers.
 window.addEventListener('beforeunload', function() {
-    // 清理定时器
+    // Clear any active timers.
     if (statusUpdateInterval) {
         clearInterval(statusUpdateInterval);
     }

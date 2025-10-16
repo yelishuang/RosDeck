@@ -1,6 +1,6 @@
 <div class="network-module">
     <div class="network-container">
-        <!-- 左侧面板: 网络接口列表 -->
+        <!-- Interface list panel -->
         <aside class="interfaces-panel">
             <div class="panel-header">
                 <h3 class="panel-title">网络接口</h3>
@@ -16,7 +16,7 @@
             </div>
         </aside>
 
-        <!-- 中央面板: 实时流量图表 -->
+        <!-- Real-time traffic panel -->
         <main class="traffic-panel">
             <div class="panel-header">
                 <h3 class="panel-title">实时流量监控</h3>
@@ -43,7 +43,7 @@
             </div>
         </main>
 
-        <!-- 右侧面板: 连接状态 -->
+        <!-- Connection status panel -->
         <aside class="connections-panel">
             <div class="panel-header">
                 <h3 class="panel-title">网络连接</h3>
@@ -60,7 +60,7 @@
         </aside>
     </div>
 
-    <!-- 管理员配置面板(可折叠) -->
+    <!-- Collapsible admin configuration panel -->
     <section class="config-panel" id="config-panel" style="display: none;">
         <div class="config-header">
             <h3>网络配置 <span class="admin-badge">管理员</span></h3>
@@ -74,7 +74,7 @@
                 <button class="config-tab" data-tab="diagnostic">网络诊断</button>
             </div>
 
-            <!-- IP配置表单 -->
+            <!-- IP configuration form -->
             <div class="config-tab-content" id="tab-ip-config">
                 <form id="form-ip-config" class="config-form">
                     <div class="form-row">
@@ -112,7 +112,7 @@
                 </form>
             </div>
 
-            <!-- 网络诊断表单 -->
+            <!-- Network diagnostic form -->
             <div class="config-tab-content" id="tab-diagnostic" style="display: none;">
                 <form id="form-diagnostic" class="config-form">
                     <div class="form-row">

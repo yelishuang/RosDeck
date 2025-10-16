@@ -1,17 +1,17 @@
-/* ==================== CSS 变量 ==================== */
+/* Design tokens */
 :root {
-    /* 主色调 */
+    /* Primary palette */
     --primary: #3b82f6;
     --primary-dark: #2563eb;
     --primary-light: #60a5fa;
     
-    /* 功能色 */
+    /* Status colors */
     --success: #10b981;
     --warning: #f59e0b;
     --danger: #ef4444;
     --info: #06b6d4;
     
-    /* 中性色 */
+    /* Neutral palette */
     --gray-50: #f9fafb;
     --gray-100: #f3f4f6;
     --gray-200: #e5e7eb;
@@ -23,24 +23,24 @@
     --gray-800: #1f2937;
     --gray-900: #111827;
     
-    /* 背景 */
+    /* Background colors */
     --bg-primary: #ffffff;
     --bg-secondary: #f8fafc;
     --bg-tertiary: #f1f5f9;
     --bg-sidebar: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
     
-    /* 文本 */
+    /* Typography colors */
     --text-primary: #0f172a;
     --text-secondary: #64748b;
     --text-tertiary: #94a3b8;
     --text-inverse: #ffffff;
     
-    /* 尺寸 */
+    /* Layout sizing */
     --sidebar-width: 240px;
     --topbar-height: 80px;
     --status-ribbon-height: 48px;
     
-    /* 圆角 */
+    /* Border radii */
     --radius-xs: 4px;
     --radius-sm: 6px;
     --radius-md: 8px;
@@ -48,20 +48,20 @@
     --radius-xl: 16px;
     --radius-2xl: 20px;
     
-    /* 阴影 */
+    /* Elevation */
     --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.05);
     --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.06);
     --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
     --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
     --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
     
-    /* 过渡 */
+    /* Motion and timing */
     --transition-fast: 150ms ease;
     --transition-base: 250ms ease;
     --transition-slow: 350ms ease;
 }
 
-/* ==================== 全局重置 ==================== */
+/* Global resets */
 *, *::before, *::after {
     margin: 0;
     padding: 0;
@@ -81,7 +81,7 @@ body {
     -moz-osx-font-smoothing: grayscale;
 }
 
-/* ==================== 侧边栏 ==================== */
+/* Sidebar layout */
 .sidebar {
     position: fixed;
     left: 0;
@@ -271,7 +271,7 @@ body {
     color: var(--text-inverse);
 }
 
-/* ==================== 主容器 ==================== */
+/* Primary layout container */
 .main-container {
     margin-left: var(--sidebar-width);
     height: 100vh;
@@ -280,7 +280,7 @@ body {
     background: var(--bg-secondary);
 }
 
-/* ==================== 状态栏 ==================== */
+/* Status ribbon */
 .status-ribbon {
     height: var(--status-ribbon-height);
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -317,7 +317,7 @@ body {
     font-family: "Consolas", monospace;
 }
 
-/* ==================== 顶栏 ==================== */
+/* Top navigation bar */
 .top-bar {
     height: var(--topbar-height);
     background: var(--bg-primary);
@@ -601,7 +601,7 @@ body {
     color: rgba(255, 255, 255, 0.8);
 }
 
-/* ==================== 内容区 ==================== */
+/* Content wrapper */
 .content-wrapper {
     flex: 1;
     overflow-y: auto;
@@ -695,7 +695,7 @@ body {
     font-size: 16px;
 }
 
-/* ==================== 快速操作卡片 ==================== */
+/* Quick action cards */
 .quick-actions {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
@@ -774,7 +774,7 @@ body {
     transform: translateX(4px);
 }
 
-/* ==================== 滚动条美化 ==================== */
+/* Scrollbar styling */
 .sidebar::-webkit-scrollbar {
     width: 6px;
 }
@@ -809,7 +809,7 @@ body {
     background: var(--gray-400);
 }
 
-/* ==================== 响应式设计 ==================== */
+/* Responsive adjustments */
 @media (max-width: 1200px) {
     .welcome-stats {
         grid-template-columns: repeat(2, 1fr);
@@ -875,7 +875,7 @@ body {
     }
 }
 
-/* ==================== 动画效果 ==================== */
+/* Animations */
 @keyframes fadeIn {
     from {
         opacity: 0;
@@ -897,7 +897,7 @@ body {
 .action-card:nth-child(3) { animation-delay: 0.3s; }
 .action-card:nth-child(4) { animation-delay: 0.4s; }
 
-/* ==================== 打印样式 ==================== */
+/* Print styles */
 @media print {
     .sidebar,
     .status-ribbon,
@@ -914,7 +914,7 @@ body {
     }
 }
 
-/* ==================== 主题切换支持（预留）==================== */
+/* Theme toggle placeholder */
 [data-theme="dark"] {
     --bg-primary: #1e293b;
     --bg-secondary: #0f172a;

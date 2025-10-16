@@ -1,4 +1,4 @@
-/* Runtime Module Styles */
+/* Styling for the runtime monitoring module */
 
 .runtime-container {
     height: 100%;
@@ -54,7 +54,7 @@
     flex-direction: column;
 }
 
-/* Toolbar */
+/* Toolbar layout */
 .runtime-toolbar {
     display: flex;
     justify-content: space-between;
@@ -86,7 +86,7 @@
     min-width: 150px;
 }
 
-/* Table Container */
+/* Table container */
 .runtime-table-container {
     flex: 1;
     overflow-y: auto;
@@ -127,7 +127,7 @@
     vertical-align: middle;
 }
 
-/* Footer */
+/* Footer summary */
 .runtime-footer {
     padding: 1rem;
     background: white;
@@ -141,14 +141,14 @@
     color: #6c757d;
 }
 
-/* Badges */
+/* Badge styling */
 .runtime-table .badge {
     font-size: 0.75rem;
     padding: 0.25rem 0.5rem;
     font-weight: 500;
 }
 
-/* Buttons */
+/* Action buttons */
 .runtime-table .btn-sm {
     padding: 0.25rem 0.5rem;
     font-size: 0.75rem;
@@ -162,12 +162,12 @@
     min-width: 32px;
 }
 
-/* Admin-only elements */
+/* Admin-only visibility styling */
 .admin-only {
     display: none;
 }
 
-/* Responsive */
+/* Responsive tweaks */
 @media (max-width: 1200px) {
     .runtime-toolbar {
         flex-direction: column;
@@ -199,13 +199,13 @@
     }
 }
 
-/* Loading state */
+/* Loading states */
 .runtime-table tbody tr.loading {
     opacity: 0.6;
     pointer-events: none;
 }
 
-/* Scrollbar styling */
+/* Custom scrollbars */
 .runtime-table-container::-webkit-scrollbar {
     width: 8px;
 }

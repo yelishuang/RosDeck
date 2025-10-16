@@ -1,6 +1,6 @@
 @import url("../../libs/xterm/xterm.css");
 
-/* RosDeck Terminal Module Styles */
+/* Styling for the RosDeck terminal module */
 .terminal-container {
     --terminal-bg: #111827;
     --terminal-toolbar-bg: #1f2937;

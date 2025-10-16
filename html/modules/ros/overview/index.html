@@ -1,6 +1,6 @@
-<!-- ROS 概览模块 -->
+<!-- Container for the ROS overview module -->
 <div class="ros-overview-container">
-    <!-- 系统信息卡片 -->
+    <!-- System status summary cards -->
     <div class="ros-system-info">
         <div class="info-header">
             <h3>
@@ -32,7 +32,7 @@
         </div>
     </div>
 
-    <!-- 标签页导航 -->
+    <!-- Tab navigation for ROS resources -->
     <ul class="nav nav-tabs mt-3" id="rosOverviewTabs" role="tablist">
         <li class="nav-item" role="presentation">
             <button class="nav-link active" id="nodes-tab" data-bs-toggle="tab" data-bs-target="#nodes-panel" type="button" role="tab">
@@ -54,9 +54,9 @@
         </li>
     </ul>
 
-    <!-- 标签页内容 -->
+    <!-- Tab content panels -->
     <div class="tab-content" id="rosOverviewTabContent">
-        <!-- 节点面板 -->
+        <!-- Nodes panel -->
         <div class="tab-pane fade show active" id="nodes-panel" role="tabpanel">
             <div class="panel-header">
                 <input type="text" class="form-control search-input" id="nodes-search" placeholder="搜索节点...">
@@ -69,7 +69,7 @@
             </div>
         </div>
 
-        <!-- 话题面板 -->
+        <!-- Topics panel -->
         <div class="tab-pane fade" id="topics-panel" role="tabpanel">
             <div class="panel-header">
                 <input type="text" class="form-control search-input" id="topics-search" placeholder="搜索话题...">
@@ -82,7 +82,7 @@
             </div>
         </div>
 
-        <!-- 服务面板 -->
+        <!-- Services panel -->
         <div class="tab-pane fade" id="services-panel" role="tabpanel">
             <div class="panel-header">
                 <input type="text" class="form-control search-input" id="services-search" placeholder="搜索服务...">

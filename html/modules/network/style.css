@@ -1,6 +1,5 @@
 /**
- * Network模块样式
- * 网络接口监控和管理
+ * Styling for the network module—interface monitoring and administrative tools.
  */
 
 .network-module {
@@ -10,7 +9,7 @@
     height: 100%;
 }
 
-/* ==================== 主容器: 三栏布局 ==================== */
+/* Layout: three-column grid */
 
 .network-container {
     display: grid;
@@ -21,7 +20,7 @@
     max-height: 750px;
 }
 
-/* ==================== 面板通用样式 ==================== */
+/* Shared panel styling */
 
 .interfaces-panel,
 .traffic-panel,
@@ -91,7 +90,7 @@
     transform: rotate(180deg);
 }
 
-/* ==================== 左侧: 接口列表 ==================== */
+/* Left column: interface list */
 
 .interfaces-panel {
     height: 100%;
@@ -221,7 +220,7 @@
     color: #991b1b;
 }
 
-/* ==================== 中央: 流量图表 ==================== */
+/* Center column: traffic chart */
 
 .traffic-panel {
     height: 100%;
@@ -303,7 +302,7 @@
     color: #0f172a;
 }
 
-/* ==================== 右侧: 连接列表 ==================== */
+/* Right column: connection list */
 
 .connections-panel {
     height: 100%;
@@ -412,7 +411,7 @@
     font-size: 13px;
 }
 
-/* ==================== 管理员配置面板 ==================== */
+/* Admin configuration panel */
 
 .config-panel {
     background: #ffffff;
@@ -618,7 +617,7 @@
     font-family: "Consolas", "Monaco", monospace;
 }
 
-/* ==================== 状态消息 ==================== */
+/* Status messaging */
 
 .loading-message,
 .empty-message,
@@ -662,7 +661,7 @@
     color: #ef4444;
 }
 
-/* ==================== 响应式布局 ==================== */
+/* Responsive adjustments */
 
 @media (max-width: 1600px) {
     .network-container {

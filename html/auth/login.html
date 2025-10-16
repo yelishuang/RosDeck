@@ -6,20 +6,20 @@
   <title>登录 | ROS Dev Board</title>
   <link rel="icon" href="../assets/images/logo.png" />
 
-  <!-- 可选：Bootstrap & Icons（图标用于眼睛按钮；没有也能运行） -->
+  <!-- Optional: Bootstrap and icon assets -->
   <link rel="stylesheet" href="../libs/bootstrap/bootstrap.min.css" />
   <link rel="stylesheet" href="../libs/bootstrap/bootstrap-icons.min.css" />
 
-  <!-- 可选：Toastr（存在则用，不存在自动降级 alert） -->
+  <!-- Optional: Toastr for toast notifications -->
   <link rel="stylesheet" href="../libs/toastr/toastr.min.css" />
 
-  <!-- 登录样式 -->
+  <!-- Login page styles -->
   <link rel="stylesheet" href="./login.css?v=20251005-bright">
-  <!-- 若后端启用 CSRF，可放开并由后端填充值 -->
-  <!-- <meta name="csrf-token" content="YOUR_TOKEN_HERE"> -->
+  <!-- Enable and populate if the backend injects a CSRF token -->
+  <!-- Example: <meta name="csrf-token" content="YOUR_TOKEN_HERE"> -->
 </head>
 <body>
-  <!-- 背景 -->
+  <!-- Background artwork -->
   <div class="bg">
     <div class="bg__image" role="img" aria-label="ROS 背景"></div>
     <div class="bg__vignette"></div>
@@ -37,14 +37,14 @@
       </header>
 
       <form id="loginForm" class="login-card__form" method="post" autocomplete="on" novalidate>
-        <!-- 用户名（浮动标签） -->
+        <!-- Username field with floating label -->
         <div class="form-group floating">
           <input id="username" name="username" type="text" placeholder=" " required />
           <label for="username" class="fl-label">用户名</label>
           <span class="focus-bar" aria-hidden="true"></span>
         </div>
 
-        <!-- 密码（浮动标签 + 眼睛按钮） -->
+        <!-- Password field with floating label and visibility toggle -->
         <div class="form-group floating pw-group">
           <div class="pw-wrap">
             <input id="password" name="password" type="password" placeholder=" " required />
@@ -66,11 +66,11 @@
     </section>
   </main>
 
-  <!-- 可选：依赖 -->
+  <!-- Optional vendor bundles -->
   <script src="../libs/jquery/jquery.min.js"></script>
   <script src="../libs/bootstrap/bootstrap.bundle.min.js"></script>
   <script src="../libs/toastr/toastr.min.js"></script>
-  <!-- 登录脚本 -->
+  <!-- Login logic -->
   <script src="./login.js?v=20251005-bright"></script>
 </body>
 </html>

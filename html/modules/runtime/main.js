@@ -10,9 +10,9 @@
     let allServices = [];
     let isAdminMode = false;
 
-    // Initialize admin mode from global state
+    // Initialize admin mode flag from the global window state
     function initAdminMode() {
-        // Check if global adminModeActive exists (set by index.js)
+        // Global adminModeActive is injected by index.js; fall back gracefully if absent
         if (typeof window.adminModeActive !== 'undefined') {
             isAdminMode = window.adminModeActive;
         }
@@ -20,7 +20,7 @@
         updateAdminUI();
     }
 
-    // Handle admin mode change event
+    // Handle admin-mode change broadcasts
     function handleAdminModeChange(event) {
         const isActive = event?.detail?.active || false;
         console.log("Runtime: Admin mode changed to", isActive);
@@ -28,7 +28,7 @@
         isAdminMode = isActive;
         updateAdminUI();
 
-        // Force re-render to show/hide buttons
+        // Force a UI update so restricted controls toggle visibility
         if ($("#processes-panel").hasClass("show active")) {
             filterAndRenderProcesses();
         }
@@ -37,14 +37,14 @@
         }
     }
 
-    // Update UI based on admin mode
+    // Toggle admin-only UI affordances
     function updateAdminUI() {
         const adminElements = document.querySelectorAll(".admin-only");
         console.log(`Runtime: Updating admin UI, mode=${isAdminMode}, found ${adminElements.length} elements`);
 
         adminElements.forEach(el => {
             if (isAdminMode) {
-                // For table cells, use table-cell; for others, use block
+                // Table cells need table-cell display, other nodes can use block
                 if (el.tagName === 'TD' || el.tagName === 'TH') {
                     el.style.display = 'table-cell';
                 } else {
@@ -56,12 +56,12 @@
         });
     }
 
-    // Get CSRF token
+    // Retrieve the CSRF token for POST requests
     function getCsrfToken() {
         return sessionStorage.getItem("rosdeck_csrf_token") || "";
     }
 
-    // ==================== Process Management ====================
+    // ==================== Process management ====================
 
     function loadProcesses() {
         const sortBy = $("#process-sort").val() || "cpu";
@@ -133,7 +133,7 @@
             tbody.append(row);
         });
 
-        // Bind kill button events
+        // Attach handlers for process termination controls
         $(".kill-process-btn").off("click").on("click", function() {
             const pid = $(this).data("pid");
             const name = $(this).data("name");
@@ -177,7 +177,7 @@
         });
     }
 
-    // ==================== Service Management ====================
+    // ==================== Service management ====================
 
     function loadServices() {
         console.log("Loading services...");
@@ -262,7 +262,7 @@
             tbody.append(row);
         });
 
-        // Bind service action buttons
+        // Attach handlers for service control buttons
         $(".service-action-btn").off("click").on("click", function() {
             const serviceName = $(this).data("name");
             const action = $(this).data("action");
@@ -318,7 +318,7 @@
         });
     }
 
-    // ==================== Utility Functions ====================
+    // ==================== Utility functions ====================
 
     function escapeHtml(text) {
         const map = {
@@ -331,20 +331,20 @@
         return text.replace(/[&<>"']/g, m => map[m]);
     }
 
-    // ==================== Event Handlers ====================
+    // ==================== Event handlers ====================
 
     function setupEventHandlers() {
-        // Process controls
+        // Process control events
         $("#refresh-processes").on("click", loadProcesses);
         $("#process-search").on("input", filterAndRenderProcesses);
         $("#process-sort").on("change", loadProcesses);
 
-        // Service controls
+        // Service control events
         $("#refresh-services").on("click", loadServices);
         $("#service-search").on("input", filterAndRenderServices);
         $("#service-filter").on("change", filterAndRenderServices);
 
-        // Tab switching - Bootstrap 5 uses different event
+        // Tab switching (Bootstrap 5 emits shown.bs.tab)
         const servicesTab = document.getElementById('services-tab');
         if (servicesTab) {
             servicesTab.addEventListener('shown.bs.tab', function() {
@@ -352,16 +352,16 @@
             });
         }
 
-        // Also bind click event as fallback
+        // Provide a click fallback for environments without Bootstrap events
         $("#services-tab").on("click", function() {
             setTimeout(loadServices, 100);
         });
 
-        // Listen to admin mode changes on window (not document)
+        // Listen for admin-mode changes on window (not document)
         window.addEventListener("rosdeck:admin-mode-change", handleAdminModeChange);
     }
 
-    // ==================== Module Lifecycle ====================
+    // ==================== Module lifecycle ====================
 
     window.moduleInit = function() {
         console.log("Runtime module initialized");
@@ -369,10 +369,10 @@
         initAdminMode();
         setupEventHandlers();
 
-        // Initial load
+        // Prime the UI with initial data
         loadProcesses();
 
-        // Auto-refresh processes every 5 seconds
+        // Schedule process refresh every five seconds
         processRefreshInterval = setInterval(function() {
             if ($("#processes-panel").hasClass("active")) {
                 loadProcesses();
@@ -388,10 +388,10 @@
             processRefreshInterval = null;
         }
 
-        // Remove admin mode change listener
+        // Detach the admin-mode listener
         window.removeEventListener("rosdeck:admin-mode-change", handleAdminModeChange);
 
-        // Unbind events
+        // Remove delegated event listeners
         $("#refresh-processes").off("click");
         $("#process-search").off("input");
         $("#process-sort").off("change");

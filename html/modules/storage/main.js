@@ -26,7 +26,7 @@
     let adminModeHandler = null;
     let apiReadyPromise = null;
 
-    // ==================== 模块生命周期 ====================
+    // ==================== Module lifecycle ====================
     function moduleInit() {
         ensureApiReady()
             .then(() => initializeModule())
@@ -98,7 +98,7 @@
         return apiReadyPromise;
     }
 
-    // ==================== 事件绑定 ====================
+    // ==================== Event binding ====================
     function bindEvents() {
         if (!$module) {
             return;
@@ -137,7 +137,7 @@
         }
     }
 
-    // ==================== 数据加载与轮询 ====================
+    // ==================== Data loading and polling ====================
     async function loadStorageData() {
         if (!$module) {
             return;
@@ -173,7 +173,7 @@
         }
     }
 
-    // ==================== 概览更新 ====================
+    // ==================== Overview updates ====================
     function updateSummaryView(summary) {
         if (!$module || !summary) {
             return;
@@ -320,7 +320,7 @@
         });
     }
 
-    // ==================== 管理员操作 ====================
+    // ==================== Administrative actions ====================
     function handleAdminModeChange(event) {
         state.isAdmin = !!event?.detail?.active;
         updateAdminUI();
@@ -656,7 +656,7 @@
         refreshOperationLog();
     }
 
-    // ==================== 报表导出 ====================
+    // ==================== Report export ====================
     async function onExportReport(event) {
         const format = $(event.currentTarget).data('format') || 'csv';
         try {
@@ -684,7 +684,7 @@
         }
     }
 
-    // ==================== 倒计时按钮 ====================
+    // ==================== Countdown buttons ====================
     function attachCountdownButton($button, callback) {
         if (!$button.length) {
             return;
@@ -779,7 +779,7 @@
         state.countdowns.clear();
     }
 
-    // ==================== 图表初始化 ====================
+    // ==================== Chart initialization ====================
     function setupCharts() {
         const usageCtx = document.getElementById('storage-usage-chart')?.getContext('2d');
         if (usageCtx) {
@@ -1004,7 +1004,7 @@
     }
 
     function scheduleTrendChartResize() {
-        // 等待 Tab 切换动画完成后再触发重算，避免 hidden 状态尺寸异常
+        // Wait for the tab transition animation to finish before recalculating dimensions to avoid hidden-state sizing issues
         window.requestAnimationFrame(() => {
             setTimeout(() => {
                 if (state.charts.trendUsage) {
@@ -1017,7 +1017,7 @@
         });
     }
 
-    // ==================== 辅助函数 ====================
+    // ==================== Helper functions ====================
     function formatBytes(bytes) {
         if (!Number.isFinite(bytes)) {
             return '--';

@@ -1,13 +1,12 @@
 /**
- * Network 模块主逻辑
- * 网络接口监控和管理功能
+ * Core logic for the network dashboard module, including monitoring and admin workflows.
  */
 
 (() => {
     const API_BASE = "/api/network";
-    const POLL_INTERVAL = 5000; // 5秒（与系统状态轮询对齐）
+    const POLL_INTERVAL = 5000; // 5 seconds, aligned with global status polling
 
-    // 模块状态
+    // Module state
     const state = {
         moduleActive: false,
         isAdmin: false,
@@ -19,10 +18,10 @@
         configCollapsed: false
     };
 
-    // DOM 元素缓存
+    // Cached DOM nodes
     const elements = {};
 
-    // ==================== 模块生命周期 ====================
+    // Module lifecycle
 
     window.moduleInit = function() {
         console.log("Network模块初始化");
@@ -32,10 +31,10 @@
         bindEvents();
         initializeChart();
 
-        // 监听管理员模式变化
+        // Subscribe to admin mode changes
         window.addEventListener("rosdeck:admin-mode-change", handleAdminModeChange);
 
-        // 初始化数据加载
+        // Prime initial data loads
         loadInterfaces();
         loadConnections();
         startPolling();
@@ -51,7 +50,7 @@
 
         window.removeEventListener("rosdeck:admin-mode-change", handleAdminModeChange);
 
-        // 清理状态
+        // Reset module state
         Object.keys(state).forEach(key => {
             if (key !== "moduleActive") {
                 state[key] = Array.isArray(state[key]) ? [] : null;
@@ -59,7 +58,7 @@
         });
     };
 
-    // ==================== DOM元素缓存 ====================
+    // Cache DOM references
 
     function cacheDom() {
         const $module = $(".network-module");
@@ -89,7 +88,7 @@
         elements.$diagnosticResult = $module.find("#diagnostic-result");
     }
 
-    // ==================== 事件绑定 ====================
+    // Event bindings
 
     function bindEvents() {
         elements.$btnRefreshInterfaces.on("click", loadInterfaces);
@@ -102,7 +101,7 @@
         elements.$btnResetForm.on("click", resetIpConfigForm);
         elements.$formDiagnostic.on("submit", handleDiagnosticSubmit);
 
-        // 接口卡片事件（事件委托）
+        // Delegate interface card interactions
         elements.$interfacesList.on("click", ".interface-card", handleInterfaceClick);
         elements.$interfacesList.on("click", ".btn-toggle-interface", handleInterfaceToggle);
     }
@@ -119,7 +118,7 @@
         elements.$interfacesList.off("click");
     }
 
-    // ==================== 数据轮询 ====================
+    // Data polling
 
     function startPolling() {
         if (state.pollTimer) return;
@@ -127,11 +126,11 @@
         state.pollTimer = setInterval(() => {
             if (state.moduleActive) {
                 loadTrafficHistory();
-                // 接口列表和连接列表按需手动刷新
+                // Interface and connection lists rely on manual refresh
             }
         }, POLL_INTERVAL);
 
-        // 立即执行第一次数据加载
+        // Kick off the first fetch immediately
         loadTrafficHistory();
     }
 
@@ -142,7 +141,7 @@
         }
     }
 
-    // ==================== 网络接口 ====================
+    // Network interfaces
 
     async function loadInterfaces() {
         try {
@@ -250,7 +249,7 @@
     }
 
     function handleInterfaceClick(e) {
-        // 阻止按钮事件冒泡
+        // Prevent toggle button clicks from bubbling
         if ($(e.target).closest(".btn-toggle-interface").length) {
             return;
         }
@@ -258,14 +257,14 @@
         const $card = $(e.currentTarget);
         const interfaceName = $card.data("interface");
 
-        // 高亮选中的接口
+        // Highlight the selected interface
         $(".interface-card").removeClass("selected");
         $card.addClass("selected");
 
         state.selectedInterface = interfaceName;
 
         console.log("选中接口:", interfaceName);
-        // 未来可用于在图表中高亮该接口的流量
+        // Future hook: highlight this interface in the chart
     }
 
     async function handleInterfaceToggle(e) {
@@ -276,7 +275,7 @@
         const enable = $btn.data("enable") === true;
         const action = enable ? "启用" : "禁用";
 
-        // 危险操作确认
+        // Confirm potentially disruptive actions
         if (!enable) {
             const confirmed = confirm(`确定要${action}接口 ${interfaceName} ?\n\n警告: 如果这是当前管理接口,操作后可能失去连接!`);
             if (!confirmed) return;
@@ -308,7 +307,7 @@
 
             if (response.ok && data.success) {
                 toastr.success(data.message || `接口${action}成功`, "成功");
-                // 刷新接口列表
+                // Refresh the interface list
                 await loadInterfaces();
             } else {
                 toastr.error(data.message || `接口${action}失败`, "失败");
@@ -331,7 +330,7 @@
         });
     }
 
-    // ==================== 流量图表 ====================
+    // Traffic chart
 
     function initializeChart() {
         const ctx = elements.$trafficChart.get(0);
@@ -455,7 +454,7 @@
         state.trafficChart.data.labels = labels;
         state.trafficChart.data.datasets[0].data = uploadData;
         state.trafficChart.data.datasets[1].data = downloadData;
-        state.trafficChart.update("none"); // 禁用动画,提高性能
+        state.trafficChart.update("none"); // Skip animations to minimize overhead
     }
 
     function updateSpeedDisplay(dataPoints) {
@@ -465,7 +464,7 @@
             return;
         }
 
-        // 显示最新的速率
+        // Display the latest sample
         const latest = dataPoints[dataPoints.length - 1];
         elements.$uploadSpeed.text(formatBytesPerSecond(latest.upload_bps));
         elements.$downloadSpeed.text(formatBytesPerSecond(latest.download_bps));
@@ -484,7 +483,7 @@
         loadTrafficHistory();
     }
 
-    // ==================== 网络连接 ====================
+    // Network connections
 
     async function loadConnections() {
         try {
@@ -510,7 +509,7 @@
         elements.$connectionsContent.empty();
 
         if (!data.success) {
-            // 权限不足,显示汇总信息
+            // Lack of privileges: fall back to summary stats
             const summary = data.summary || {};
             elements.$connectionsContent.html(`
                 <div class="connections-summary">
@@ -537,7 +536,7 @@
             return;
         }
 
-        // 显示详细连接列表
+        // Render detailed connection rows
         const connections = data.connections || [];
 
         if (connections.length === 0) {
@@ -602,7 +601,7 @@
         `);
     }
 
-    // ==================== 管理员配置 ====================
+    // Admin configuration
 
     function handleAdminModeChange(event) {
         const isActive = event?.detail?.active || false;
@@ -614,7 +613,7 @@
             elements.$configPanel.hide();
         }
 
-        // 刷新界面列表（显示/隐藏启用禁用按钮）
+        // Refresh interface list to toggle admin controls
         renderInterfaces();
     }
 
@@ -655,7 +654,7 @@
             return;
         }
 
-        // 确认提示
+        // Prompt for confirmation
         let confirmMsg = `确定要配置接口 ${iface} ?\n\nIP: ${ipAddress}/${netmask}`;
         if (gateway) {
             confirmMsg += `\n网关: ${gateway}`;
@@ -768,7 +767,7 @@
         }
     }
 
-    // ==================== 工具函数 ====================
+    // Utility functions
 
     async function ensureCsrfToken() {
         try {

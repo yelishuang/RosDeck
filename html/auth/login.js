@@ -1,10 +1,10 @@
-/* auth/login.js — 高对比浮动标签 + 限流 + 轻量埋点 */
+/* auth/login.js — High-contrast login with rate limiting and metrics */
 (() => {
   "use strict";
 
-  // ===== 配置 =====
+  // Configuration
   const API_LOGIN    = "/api/auth/login";
-  const API_METRICS  = "/api/metrics";         // 埋点（没有也不报错）
+  const API_METRICS  = "/api/metrics";         // Metrics endpoint; failures are non-blocking
   const DEFAULT_REDIRECT = "../index.html";
   const REQUEST_TIMEOUT_MS = 10000;
   const STORAGE_KEYS = {
@@ -23,7 +23,7 @@
     show: "显示密码", hide: "隐藏密码"
   };
 
-  // ===== 工具 =====
+  // Utilities
   const $ = (s, r=document) => r.querySelector(s);
   const hasToastr = () => typeof window.toastr !== "undefined";
   const toast = {
@@ -33,7 +33,7 @@
   };
   const sleep = (ms)=>new Promise(r=>setTimeout(r,ms));
 
-  // 非阻塞埋点
+  // Fire-and-forget metrics helper
   async function metric(event, payload={}){
     try{
       const c=new AbortController(); setTimeout(()=>c.abort(),1500);
@@ -65,7 +65,7 @@
     }finally{ clearTimeout(id); }
   }
 
-  // ===== 业务逻辑 =====
+  // Business logic
   function mount(){
     const form = $("#loginForm"); if(!form) return;
     const user = $("#username");
@@ -75,7 +75,7 @@
 
     metric("login_page_view");
 
-    // 密码可见/隐藏
+    // Toggle password visibility
     toggle?.addEventListener("click", ()=>{
       const isPwd = pass.type === "password";
       pass.type = isPwd ? "text" : "password";
@@ -87,7 +87,7 @@
       pass.focus();
     });
 
-    // 状态切换
+    // Manage loading state
     function setLoading(loading){
       [user, pass, submit].forEach(el => el && (el.disabled = !!loading));
       if(submit){

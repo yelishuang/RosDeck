@@ -10,7 +10,7 @@
         currentTab: 'topic-monitor',
         viewMode: 'single',
         topics: [],
-        monitoredTopics: new Map(), // topicName -> monitor state
+        monitoredTopics: new Map(), // maps topic name to its monitoring metadata
         analysisCharts: {
             freq: null,
             size: null,

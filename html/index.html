@@ -6,30 +6,30 @@
     <title>RosDeck | ROS 开发板监控</title>
     <link rel="icon" href="./assets/images/logo.png">
     
-    <!-- Bootstrap -->
+    <!-- Vendor stylesheets -->
     <link rel="stylesheet" href="./libs/bootstrap/bootstrap.min.css">
     <link rel="stylesheet" href="./libs/bootstrap/bootstrap-icons.min.css">
     <link rel="stylesheet" href="./libs/toastr/toastr.min.css">
 
-    <!-- 主样式 -->
+    <!-- Dashboard stylesheet -->
     <link rel="stylesheet" href="./index.css">
 
-    <!-- 公共样式 -->
+    <!-- Shared styles -->
     <link rel="stylesheet" href="./shared/css/common.css">
 
     <meta name="csrf-token" content="">
 </head>
 <body>
-    <!-- 侧边栏 - 替换原 index.html 中的 <aside class="sidebar"> 部分 -->
+    <!-- Sidebar navigation -->
     <aside class="sidebar">
-        <!-- 用户信息 -->
+        <!-- User summary -->
         <div class="user-info">
             <div class="username">openeuler</div>
             <span class="system-id btn-edit" data-editable="false">ye-CNP6S</span>
         </div>
         <hr class="divider">
         
-        <!-- 系统分类 -->
+        <!-- System module group -->
         <div class="category-block">
             <div class="category-title">系统</div>
             <ul class="submenu">
@@ -42,7 +42,7 @@
         </div>
         <hr class="divider">
         
-        <!-- 工具分类 -->
+        <!-- Tools module group -->
         <div class="category-block">
             <div class="category-title">工具</div>
             <ul class="submenu">
@@ -52,7 +52,7 @@
         </div>
         <hr class="divider">
         
-        <!-- ROS分类 -->
+        <!-- ROS module group -->
         <div class="category-block">
             <div class="category-title">ROS</div>
             <ul class="submenu">
@@ -63,7 +63,7 @@
             </ul>
         </div>
 
-        <!-- 重启按钮 -->
+        <!-- Power controls -->
         <div class="power-actions">
             <div class="power-btn">
                 <div class="power-btn-main">
@@ -79,9 +79,9 @@
     </aside>
 
 
-    <!-- 主容器 -->
+    <!-- Main content layout -->
     <main class="main-container">
-        <!-- 顶部状态栏 -->
+        <!-- Status ribbon -->
         <div class="status-ribbon">            
             <div class="status-item uptime-item">
                 <i class="bi bi-clock-history"></i>
@@ -110,7 +110,7 @@
             </div>
         </div>
 
-        <!-- 主顶栏 -->
+        <!-- Primary top bar -->
         <header class="top-bar">
             <div class="top-left">
                 <div class="breadcrumb-trail">
@@ -158,16 +158,16 @@
             </div>
         </header>
 
-        <!-- 内容区 -->
+        <!-- Module content region -->
         <div class="content-wrapper">
             <div class="content-area">
-                <!-- 动态加载的模块内容将显示在这里 -->
-                <!-- 默认会加载 modules/overview/index.html -->
+                <!-- Module markup is injected here -->
+                <!-- The overview module loads by default -->
             </div>
         </div>
     </main>
 
-    <!-- 脚本 -->
+    <!-- JavaScript dependencies -->
     <script src="./libs/jquery/jquery.min.js"></script>
     <script src="./libs/bootstrap/bootstrap.bundle.min.js"></script>
     <script src="./libs/toastr/toastr.min.js"></script>

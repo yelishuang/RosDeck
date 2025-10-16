@@ -1,10 +1,10 @@
 /**
- * 文件传输模块逻辑
+ * File transfer module logic for browsing directories, uploads, and deletions.
  */
 
 (() => {
     const FILE_API_BASE = '/api/files';
-    const FILE_MAX_UPLOAD_BYTES = 50 * 1024 * 1024; // 与后端保持一致：50 MB
+    const FILE_MAX_UPLOAD_BYTES = 50 * 1024 * 1024; // Mirror backend limit: 50 MB
 
     const fileState = {
         currentPath: '',
@@ -18,7 +18,7 @@
     let $module = null;
     let handleAdminModeChangeBound = null;
 
-    // ==================== 模块入口 ====================
+    // Module lifecycle hooks.
     function moduleInit() {
         console.log('文件传输模块初始化');
         $module = $('.file-transfer-module');
@@ -50,7 +50,7 @@
         console.log('文件传输模块卸载完成');
     }
 
-// ==================== 事件绑定 ====================
+    // Event bindings.
     function bindEvents() {
         $module.find('#file-upload-btn').on('click', onUploadButtonClick);
         $module.find('#file-upload-input').on('change', onFileInputChange);
@@ -73,7 +73,7 @@
         fileState.loading = false;
     }
 
-// ==================== 事件处理 ====================
+    // Event handlers.
     function onUploadButtonClick() {
         $module.find('#file-upload-input').trigger('click');
     }
@@ -153,7 +153,7 @@
         }
     }
 
-// ==================== 核心逻辑 ====================
+    // Core operations.
     async function loadDirectory(path) {
         setLoading(true);
         try {
@@ -317,7 +317,7 @@
         }, 0);
     }
 
-// ==================== 视图渲染 ====================
+    // Rendering helpers.
     function renderView(data) {
         renderSummary(data);
         renderBreadcrumbs(data);
@@ -447,7 +447,7 @@
         }
     }
 
-// ==================== 状态与 UI 辅助 ====================
+    // State utilities and UI helpers.
     function setLoading(isLoading) {
         fileState.loading = isLoading;
         const $tbody = $module.find('#file-table-body');

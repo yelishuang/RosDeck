@@ -30,7 +30,7 @@
     let adminModeListener = null;
     const handlers = {};
 
-    // -------- Utilities --------
+    // Utility helpers
     function qs(selector) {
         return document.querySelector(selector);
     }
@@ -76,8 +76,8 @@
         if (!raw) {
             return null;
         }
-        // datetime-local -> YYYY-MM-DDTHH:MM
-        return `${raw}:00`; // journalctl 时间转换在后端完成
+        // Convert datetime-local input to YYYY-MM-DDTHH:MM
+        return `${raw}:00`; // journalctl timestamp normalization happens server-side
     }
 
     function setLoading(loading) {
@@ -113,7 +113,7 @@
         qs(selectors.list)?.classList.remove('d-none');
     }
 
-    // -------- Metadata --------
+    // Metadata loading
     function fetchMetadata() {
         return fetch('/api/logs/metadata', { credentials: 'include' })
             .then(async response => {
@@ -180,7 +180,7 @@
         }
     }
 
-    // -------- Rendering --------
+    // Rendering logic
     function renderEntries(entries) {
         const container = qs(selectors.list);
         if (!container) {
@@ -234,7 +234,7 @@
         }
     }
 
-    // -------- Query --------
+    // Query execution
     function buildQueryParams({ reset = false } = {}) {
         const params = new URLSearchParams();
         const prioritySelect = qs(selectors.priority);
@@ -302,7 +302,7 @@
                             detail = payload.message;
                         }
                     } catch (err) {
-                        /* ignore */
+                        /* Ignore JSON parsing errors and fall back to HTTP status */
                     }
                     throw new Error(detail);
                 }
@@ -336,7 +336,7 @@
             });
     }
 
-    // -------- Events --------
+    // Event wiring
     function bindEvents() {
         handlers.search = () => loadLogs({ reset: true });
         handlers.refresh = () => loadLogs({ reset: true });
@@ -394,7 +394,7 @@
         });
     }
 
-    // -------- Module lifecycle --------
+    // Module lifecycle
     window.moduleInit = function () {
         bindEvents();
         fetchMetadata().then(() => {

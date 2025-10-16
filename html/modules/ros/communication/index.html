@@ -1,6 +1,6 @@
-<!-- ROS 通信监控模块 -->
+<!-- Container for the ROS communication suite -->
 <div class="ros-comm-module">
-    <!-- 顶部标签页导航 -->
+    <!-- Tab navigation across communication tools -->
     <ul class="comm-tabs" id="comm-tabs">
         <li class="comm-tab active" data-tab="topic-monitor">
             <i class="bi bi-broadcast"></i>
@@ -20,12 +20,12 @@
         </li>
     </ul>
 
-    <!-- 标签页内容容器 -->
+    <!-- Wrapper for tabbed panel content -->
     <div class="comm-content">
-        <!-- ========== 1. 话题监控面板 ========== -->
+        <!-- ========== Panel 1: topic monitoring ========== -->
         <div class="comm-panel active" id="panel-topic-monitor">
             <div class="monitor-layout">
-                <!-- 左侧：话题列表 -->
+                <!-- Left column: topic selector -->
                 <aside class="topic-sidebar">
                     <div class="sidebar-header">
                         <h3 class="sidebar-title">话题列表</h3>
@@ -47,7 +47,7 @@
                     </div>
                 </aside>
 
-                <!-- 右侧：多话题监控区 -->
+                <!-- Right column: multi-topic monitoring workspace -->
                 <main class="monitor-main">
                     <div class="monitor-header">
                         <h3 class="monitor-title">实时消息监控</h3>
@@ -60,7 +60,7 @@
                         </div>
                     </div>
                     <div class="monitor-grid" id="monitor-grid" data-mode="single">
-                        <!-- 监控窗口将动态生成 -->
+                        <!-- Monitor tiles are injected dynamically -->
                         <div class="monitor-placeholder">
                             <i class="bi bi-arrow-left-circle"></i>
                             <p>从左侧选择话题开始监控</p>
@@ -70,10 +70,10 @@
             </div>
         </div>
 
-        <!-- ========== 2. 消息分析面板 ========== -->
+        <!-- ========== Panel 2: message analytics ========== -->
         <div class="comm-panel" id="panel-message-analysis">
             <div class="analysis-layout">
-                <!-- 分析配置区 -->
+                <!-- Configuration controls -->
                 <div class="analysis-config">
                     <div class="config-section">
                         <label class="config-label">选择话题</label>
@@ -98,9 +98,9 @@
                     </div>
                 </div>
 
-                <!-- 分析结果区 -->
+                <!-- Analytics output -->
                 <div class="analysis-results">
-                    <!-- 统计卡片 -->
+                    <!-- Summary metrics -->
                     <div class="stats-grid">
                         <div class="stat-card">
                             <div class="stat-icon" style="background: #e0f2fe;">
@@ -140,7 +140,7 @@
                         </div>
                     </div>
 
-                    <!-- 频率趋势图 -->
+                    <!-- Frequency trend chart -->
                     <div class="chart-section">
                         <h4 class="chart-title">消息频率趋势</h4>
                         <div class="chart-container">
@@ -148,7 +148,7 @@
                         </div>
                     </div>
 
-                    <!-- 消息大小分布图 -->
+                    <!-- Message size distribution chart -->
                     <div class="chart-section">
                         <h4 class="chart-title">消息大小分布</h4>
                         <div class="chart-container chart-container-small">
@@ -159,10 +159,10 @@
             </div>
         </div>
 
-        <!-- ========== 3. 服务调用面板 ========== -->
+        <!-- ========== Panel 3: service invocation ========== -->
         <div class="comm-panel" id="panel-service-call">
             <div class="service-layout">
-                <!-- 左侧：服务列表 -->
+                <!-- Left column: service catalogue -->
                 <aside class="service-sidebar">
                     <div class="sidebar-header">
                         <h3 class="sidebar-title">服务列表</h3>
@@ -182,10 +182,10 @@
                     </div>
                 </aside>
 
-                <!-- 右侧：服务调用区 -->
+                <!-- Right column: request composer -->
                 <main class="service-main">
                     <div class="service-call-container">
-                        <!-- 服务信息 -->
+                        <!-- Selected service details -->
                         <div class="service-info" id="service-info" style="display: none;">
                             <h3 class="service-name" id="selected-service-name">-</h3>
                             <div class="service-meta">
@@ -193,7 +193,7 @@
                             </div>
                         </div>
 
-                        <!-- 请求参数编辑器 -->
+                        <!-- Request body editor -->
                         <div class="request-editor" id="request-editor-section" style="display: none;">
                             <div class="editor-header">
                                 <h4 class="editor-title">请求参数 (JSON)</h4>
@@ -219,7 +219,7 @@
                             </div>
                         </div>
 
-                        <!-- 响应结果 -->
+                        <!-- Service response viewer -->
                         <div class="response-viewer" id="response-viewer" style="display: none;">
                             <div class="viewer-header">
                                 <h4 class="viewer-title">响应结果</h4>
@@ -230,7 +230,7 @@
                             </div>
                         </div>
 
-                        <!-- 调用历史 -->
+                        <!-- Invocation history -->
                         <div class="call-history" id="call-history-section" style="display: none;">
                             <h4 class="history-title">
                                 <i class="bi bi-clock-history"></i>
@@ -239,7 +239,7 @@
                             <div class="history-list" id="call-history-list"></div>
                         </div>
 
-                        <!-- 占位符 -->
+                        <!-- Placeholder shown when nothing is selected -->
                         <div class="service-placeholder" id="service-placeholder">
                             <i class="bi bi-arrow-left-circle"></i>
                             <p>从左侧选择服务开始调用</p>
@@ -249,10 +249,10 @@
             </div>
         </div>
 
-        <!-- ========== 4. 消息类型面板 ========== -->
+        <!-- ========== Panel 4: message type explorer ========== -->
         <div class="comm-panel" id="panel-message-types">
             <div class="types-layout">
-                <!-- 左侧：类型列表 -->
+                <!-- Left column: message type list -->
                 <aside class="types-sidebar">
                     <div class="sidebar-header">
                         <h3 class="sidebar-title">消息类型</h3>
@@ -283,10 +283,10 @@
                     </div>
                 </aside>
 
-                <!-- 右侧：类型定义查看器 -->
+                <!-- Right column: type definition viewer -->
                 <main class="types-main">
                     <div class="type-viewer-container">
-                        <!-- 类型信息 -->
+                        <!-- Selected type metadata -->
                         <div class="type-info" id="type-info" style="display: none;">
                             <h3 class="type-name" id="selected-type-name">-</h3>
                             <div class="type-meta">
@@ -295,7 +295,7 @@
                             </div>
                         </div>
 
-                        <!-- 类型定义 -->
+                        <!-- Raw type definition -->
                         <div class="type-definition" id="type-definition-section" style="display: none;">
                             <div class="definition-header">
                                 <h4 class="definition-title">消息定义</h4>
@@ -308,7 +308,7 @@
                             </div>
                         </div>
 
-                        <!-- 字段列表 -->
+                        <!-- Flattened field list -->
                         <div class="type-fields" id="type-fields-section" style="display: none;">
                             <h4 class="fields-title">字段说明</h4>
                             <div class="fields-table-wrapper">
@@ -325,7 +325,7 @@
                             </div>
                         </div>
 
-                        <!-- 占位符 -->
+                        <!-- Placeholder when no type is selected -->
                         <div class="types-placeholder" id="types-placeholder">
                             <i class="bi bi-arrow-left-circle"></i>
                             <p>从左侧选择消息类型查看定义</p>

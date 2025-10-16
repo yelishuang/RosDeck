@@ -1,11 +1,11 @@
-/* ROS 概览模块样式 */
+/* Styling for the ROS overview module */
 .ros-overview-container {
     padding: 20px;
     max-width: 1400px;
     margin: 0 auto;
 }
 
-/* 系统信息卡片 */
+/* System info card */
 .ros-system-info {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     border-radius: 12px;
@@ -79,7 +79,7 @@
     font-weight: 600;
 }
 
-/* 标签页 */
+/* Tabs */
 .nav-tabs {
     border-bottom: 2px solid #dee2e6;
 }
@@ -107,7 +107,7 @@
     margin-right: 5px;
 }
 
-/* 面板 */
+/* Panel layout */
 .panel-header {
     padding: 15px 0;
 }
@@ -123,7 +123,7 @@
     overflow-y: auto;
 }
 
-/* 空状态 */
+/* Empty states */
 .empty-state {
     display: flex;
     flex-direction: column;
@@ -144,7 +144,7 @@
     margin: 0;
 }
 
-/* 实体卡片 */
+/* Entity cards */
 .entity-card {
     background: white;
     border: 1px solid #e0e0e0;
@@ -219,7 +219,7 @@
     font-size: 0.9rem;
 }
 
-/* 话题详情 */
+/* Topic details */
 .topic-details {
     margin-top: 15px;
     padding-top: 15px;
@@ -265,14 +265,14 @@
     color: #667eea;
 }
 
-/* Badge样式 */
+/* Badge styling */
 .badge {
     font-size: 0.75rem;
     padding: 4px 8px;
     border-radius: 12px;
 }
 
-/* 新增/删除动画 */
+/* Add/remove animations */
 @keyframes fadeIn {
     from {
         opacity: 0;
@@ -303,7 +303,7 @@
     animation: fadeOut 0.3s ease-out;
 }
 
-/* 响应式 */
+/* Responsive adjustments */
 @media (max-width: 768px) {
     .info-content {
         grid-template-columns: 1fr;

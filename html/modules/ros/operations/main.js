@@ -52,7 +52,7 @@
     let adminModeHandler = null;
     let bootstrapModal = null;
 
-    // ==================== Module Lifecycle ====================
+    // ==================== Module lifecycle ====================
     window.moduleInit = function moduleInit() {
         console.log("[ROS Operations] 初始化模块");
         state.adminMode = Boolean(window.adminModeActive);
@@ -67,10 +67,10 @@
         bindLaunchEvents();
         registerAdminModeListener();
 
-        // 初始加载
+        // Trigger an initial data refresh
         refreshAll();
 
-        // 启动轮询
+        // Kick off background pollers
         startPollers();
     };
 
@@ -140,7 +140,7 @@
         ]).catch(err => console.error("初始化加载失败", err));
     }
 
-    // ==================== UI Helpers ====================
+    // ==================== UI utility helpers ====================
     function initModal() {
         const modalElement = document.getElementById("ros-operations-modal");
         if (window.bootstrap && modalElement) {
@@ -257,7 +257,7 @@
         URL.revokeObjectURL(url);
     }
 
-    // ==================== 参数管理 ====================
+    // ==================== Parameter management ====================
     function bindParameterEvents() {
         const nodeSearch = document.getElementById("parameter-node-search");
         if (nodeSearch) {
@@ -551,7 +551,7 @@
         state.paramHighlightTimers.clear();
     }
 
-    // ==================== 数据录制 ====================
+    // ==================== Data recording ====================
     function bindRecordingEvents() {
         document.querySelector('[data-action="start-recording"]')?.addEventListener("click", onStartRecording);
         document.querySelector('[data-action="stop-all-recordings"]')?.addEventListener("click", stopAllRecordings);
@@ -652,7 +652,7 @@
     function applyPresetTopics(preset) {
         if (!preset || !Array.isArray(preset.topics)) return;
         state.selectedTopics = new Set(preset.topics);
-        // 更新勾选状态
+        // Sync the checkbox state
         document.querySelectorAll("#recording-topic-list input[type=checkbox]").forEach(input => {
             input.checked = state.selectedTopics.has(input.value);
         });
@@ -809,7 +809,7 @@
         }
     }
 
-    // ==================== Bag 管理 ====================
+    // ==================== Bag management ====================
     function bindBagEvents() {
         document.querySelector('[data-action="refresh-bags"]')?.addEventListener("click", loadBagList);
         document.querySelector('[data-action="start-playback"]')?.addEventListener("click", startPlayback);
@@ -1086,7 +1086,7 @@
         }
     }
 
-    // ==================== Lifecycle ====================
+    // ==================== Lifecycle operations ====================
     function bindLifecycleEvents() {
         document.querySelector('[data-action="refresh-lifecycle"]')?.addEventListener("click", loadLifecycleNodes);
     }
@@ -1201,7 +1201,7 @@
         }
     }
 
-    // ==================== Launch 管理 ====================
+    // ==================== Launch management ====================
     function bindLaunchEvents() {
         document.querySelector('[data-action="refresh-launch-list"]')?.addEventListener("click", loadLaunchFiles);
         document.getElementById("launch-search")?.addEventListener("input", debounce(loadLaunchFiles, 400));
@@ -1410,7 +1410,7 @@
         }
     }
 
-    // ==================== Util helpers ====================
+    // ==================== Utility helpers ====================
     function parseKeyValueString(text) {
         if (!text) return null;
         const pairs = text.split(/\s+/).filter(Boolean);

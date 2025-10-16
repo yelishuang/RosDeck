@@ -238,7 +238,7 @@
             try {
                 disposable.dispose();
             } catch (_) {
-                /* ignore */
+                /* intentionally ignored */
             }
         });
         terminalDisposables = [];
@@ -247,7 +247,7 @@
             try {
                 terminal.dispose();
             } catch (_) {
-                /* ignore */
+                /* intentionally ignored */
             }
             terminal = null;
         }
@@ -289,7 +289,7 @@
             try {
                 window.localStorage.setItem(STORAGE_KEY_THEME, state.theme);
             } catch (_) {
-                /* ignore */
+                /* intentionally ignored */
             }
         }
 
@@ -786,7 +786,7 @@
             try {
                 state.socket.close(1001, 'module cleanup');
             } catch (_) {
-                /* ignore */
+                /* intentionally ignored */
             }
             state.socket = null;
         }

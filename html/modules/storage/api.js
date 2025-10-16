@@ -24,7 +24,7 @@
         try {
             data = await response.json();
         } catch (err) {
-            // ignore JSON parse error for non JSON response
+            // Non-JSON responses are expected for certain endpoints; swallow parse errors
         }
         if (!response.ok) {
             const error = new Error(data?.message || `请求失败 (HTTP ${response.status})`);
