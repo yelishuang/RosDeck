@@ -1,6 +1,5 @@
 """
-存储监控服务
-负责收集磁盘总体信息、分区详情与历史趋势数据
+Storage monitoring service providing disk summaries, partition details, and trend history.
 """
 import os
 import psutil
@@ -15,20 +14,20 @@ logger = logging.getLogger(__name__)
 
 
 def _now_iso() -> str:
-    """返回当前 UTC ISO 时间字符串"""
+    """Return the current UTC timestamp formatted as ISO 8601."""
     return datetime.now(timezone.utc).isoformat()
 
 
 def _device_name(path: str) -> str:
-    """提取设备名, 供映射 psutil disk io 数据使用"""
+    """Extract the device name in order to map psutil disk I/O stats."""
     return os.path.basename(path)
 
 
 class StorageMonitor:
-    """磁盘存储监控"""
+    """Collects disk utilisation metrics and maintains rolling histories."""
 
-    HISTORY_MAX_MINUTES = 10          # 历史记录保留时长
-    SAMPLE_INTERVAL_SECONDS = 5       # 最小采样间隔
+    HISTORY_MAX_MINUTES = 10          # Retention window in minutes.
+    SAMPLE_INTERVAL_SECONDS = 5       # Minimum sampling interval in seconds.
 
     def __init__(self):
         self._lock = threading.Lock()
@@ -41,7 +40,7 @@ class StorageMonitor:
         self._perdisk_rates: Dict[str, Dict[str, float]] = {}
 
     def _ensure_sample(self) -> Dict[str, object]:
-        """确保在合理时间范围内生成最新采样"""
+        """Ensure a fresh sample exists within the configured interval."""
         with self._lock:
             current_time = time.time()
 
@@ -54,7 +53,7 @@ class StorageMonitor:
             return self._collect_sample_locked(current_time)
 
     def _collect_sample_locked(self, current_time: float) -> Dict[str, object]:
-        """在持有锁的情况下采样系统信息"""
+        """Collect metrics while the shared lock is held."""
         usage = psutil.disk_usage("/")
         io_counters = psutil.disk_io_counters()
         perdisk_counters = psutil.disk_io_counters(perdisk=True) or {}
@@ -70,7 +69,7 @@ class StorageMonitor:
         read_bytes_per_sec = max(read_bytes_per_sec, 0.0)
         write_bytes_per_sec = max(write_bytes_per_sec, 0.0)
 
-        # 计算各磁盘速率
+        # Calculate per-device throughput rates.
         new_perdisk_rates: Dict[str, Dict[str, float]] = {}
         for device, stats in perdisk_counters.items():
             last = self._last_perdisk_io.get(device)
@@ -111,7 +110,7 @@ class StorageMonitor:
         return summary
 
     def _append_history_locked(self, timestamp: str, usage_percent: float, io_data: Dict[str, float]):
-        """维护固定窗口历史记录"""
+        """Maintain the bounded history window."""
         self._history.append({
             "timestamp": timestamp,
             "usage_percent": usage_percent,
@@ -119,13 +118,13 @@ class StorageMonitor:
             "write_bytes_per_sec": round(io_data["write_bytes_per_sec"], 2),
         })
 
-        # 控制历史长度: SAMPLE_INTERVAL_SECONDS * 保留分钟
+        # Limit history length based on the retention window.
         max_len = int(self.HISTORY_MAX_MINUTES * 60 / max(self.SAMPLE_INTERVAL_SECONDS, 1))
         while len(self._history) > max_len:
             self._history.popleft()
 
     def get_summary(self) -> Dict[str, object]:
-        """返回磁盘使用总览及历史"""
+        """Return the disk usage summary along with the cached history."""
         summary = self._ensure_sample()
 
         with self._lock:
@@ -137,7 +136,7 @@ class StorageMonitor:
         }
 
     def _partition_io_rates(self, device_path: str) -> Dict[str, float]:
-        """根据设备路径返回对应 IO 速率"""
+        """Return the IO rates associated with the given device path."""
         name = _device_name(device_path)
         candidates = []
         trimmed = name
@@ -165,12 +164,12 @@ class StorageMonitor:
         return {"read_bytes_per_sec": 0.0, "write_bytes_per_sec": 0.0}
 
     def get_partitions(self) -> List[Dict[str, object]]:
-        """列出所有有效分区信息"""
+        """Return detailed statistics for each accessible partition."""
         self._ensure_sample()
 
         partitions = []
         for part in psutil.disk_partitions(all=False):
-            # 排除虚拟/只读文件系统
+            # Skip virtual or read-only filesystems.
             if not part.mountpoint or part.fstype in {"squashfs"}:
                 continue
 
@@ -201,8 +200,8 @@ class StorageMonitor:
         partitions.sort(key=lambda item: item["mountpoint"])
         return partitions
 
-    def build_report_payload(self) -> Dict[str, object]:
-        """构造报表数据, 供 JSON/CSV 导出"""
+   def build_report_payload(self) -> Dict[str, object]:
+        """Compose a report payload usable for JSON or CSV export."""
         summary = self.get_summary()
         partitions = self.get_partitions()
 
@@ -213,5 +212,5 @@ class StorageMonitor:
         }
 
 
-# 全局实例
+# Shared singleton instance.
 storage_monitor = StorageMonitor()

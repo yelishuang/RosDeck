@@ -1,6 +1,5 @@
 """
-ROS 2 图谱监控服务
-提供实时ROS图谱监控、增量检测、WebSocket推送功能
+ROS 2 graph monitoring service delivering snapshots and real-time deltas over WebSockets.
 """
 import asyncio
 import copy
@@ -25,12 +24,12 @@ logger = logging.getLogger(__name__)
 
 
 def _now_iso() -> str:
-    """返回当前 UTC ISO 时间字符串"""
+    """Return the current UTC timestamp as an ISO 8601 formatted string."""
     return datetime.now(timezone.utc).isoformat()
 
 
 class NodeInfo:
-    """节点信息"""
+    """Represents a ROS node discovered within the graph."""
     def __init__(self, name: str, namespace: str, first_seen: str):
         self.name = name
         self.namespace = namespace
@@ -55,10 +54,10 @@ class NodeInfo:
 
 
 class TopicInfo:
-    """话题信息"""
+    """Represents a ROS topic along with publisher and subscriber sets."""
     def __init__(self, name: str, msg_types: List[str]):
         self.name = name
-        self.msg_types = msg_types  # 话题可能有多个类型
+        self.msg_types = msg_types  # Topics can expose multiple message types.
         self.publishers: Set[str] = set()
         self.subscribers: Set[str] = set()
 
@@ -88,7 +87,7 @@ class TopicInfo:
 
 
 class ServiceInfo:
-    """服务信息"""
+    """Representation of a ROS service endpoint."""
     def __init__(self, name: str, service_types: List[str]):
         self.name = name
         self.service_types = service_types
@@ -109,7 +108,7 @@ class ServiceInfo:
 
 
 class ROSGraphSnapshot:
-    """ROS图谱快照"""
+    """Immutable snapshot of the ROS graph state."""
     def __init__(self, snapshot_id: int):
         self.snapshot_id = snapshot_id
         self.timestamp = _now_iso()
@@ -121,7 +120,7 @@ class ROSGraphSnapshot:
         self.domain_id = 0
 
     def compute_hash(self) -> int:
-        """计算快照哈希，用于快速检测变化"""
+        """Generate a hash to quickly detect structural changes."""
         return hash((
             frozenset(self.nodes.keys()),
             frozenset(self.topics.values()),
@@ -130,35 +129,35 @@ class ROSGraphSnapshot:
 
 
 class ROSGraphMonitor:
-    """ROS 2 图谱监控服务"""
+    """Continuously tracks the ROS graph and distributes deltas to subscribed clients."""
 
-    UPDATE_INTERVAL = 2.0  # 2秒更新间隔
+    UPDATE_INTERVAL = 2.0  # Refresh interval in seconds.
 
     def __init__(self):
         self._node_name = "rosdeck_graph_monitor"
         self._ros_version_hint = self._resolve_ros_version()
 
-        # 快照管理
+        # Snapshot bookkeeping.
         self._current_snapshot: Optional[ROSGraphSnapshot] = None
         self._previous_snapshot: Optional[ROSGraphSnapshot] = None
         self._snapshot_id_counter = 0
         self._lock = threading.Lock()
 
-        # 节点首次发现时间追踪
+        # Track the initial discovery timestamp for each node.
         self._node_first_seen: Dict[str, str] = {}
 
-        # 用户标记（单用户场景，全局共享）
+        # Bookmark storage (shared in the single-user deployment model).
         self._bookmarks: Dict[str, Set[str]] = {
             "nodes": set(),
             "topics": set(),
             "services": set(),
         }
 
-        # WebSocket客户端管理（虽然是单用户，但保留扩展性）
+        # Manage connected WebSocket clients (designed for potential multi-user growth).
         self._websocket_clients: Set[Any] = set()
         self._event_loop: Optional[asyncio.AbstractEventLoop] = None
 
-        # 后台线程
+        # Background worker management.
         self._stop_event = threading.Event()
         self._primed_event = threading.Event()
         self._worker: Optional[threading.Thread] = None
@@ -177,24 +176,24 @@ class ROSGraphMonitor:
 
     @staticmethod
     def _resolve_ros_version() -> str:
-        """尝试推断 ROS 版本"""
+        """Attempt to derive the ROS distribution version from the environment."""
         distro = os.environ.get("ROS_DISTRO", "").strip()
         if distro:
             return f"ROS 2 {distro.capitalize()}"
         return "ROS 2"
 
     def set_event_loop(self, loop: asyncio.AbstractEventLoop):
-        """设置事件循环，用于WebSocket广播"""
+        """Assign the event loop used to dispatch WebSocket notifications."""
         self._event_loop = loop
 
     def _refresh_loop(self):
-        """后台刷新循环：维护 rclpy 节点并定期采样"""
+        """Background refresh loop responsible for maintaining state and sampling the graph."""
         node = None
         executor = None
         initialized = False
 
         try:
-            # 检查 rclpy 是否已初始化
+            # Ensure rclpy is initialised before interacting with the graph.
             if not rclpy.ok():
                 rclpy.init(args=None)
                 initialized = True
@@ -213,13 +212,13 @@ class ROSGraphMonitor:
                         self._previous_snapshot = self._current_snapshot
                         self._current_snapshot = snapshot
 
-                    # 检测变化并广播
+                    # Detect changes and broadcast to connected clients.
                     if self._previous_snapshot is not None:
                         delta = self._detect_changes()
                         if delta:
                             self._broadcast_delta(delta)
                     else:
-                        # 首次快照，发送全量数据
+                        # First snapshot for this session; push full graph state.
                         full_data = self._build_full_data()
                         self._broadcast_delta(full_data)
 
@@ -240,11 +239,10 @@ class ROSGraphMonitor:
                     node.destroy_node()
                 except Exception as e:
                     logger.debug("销毁节点失败: %s", e)
-            # 注意：不要在这里调用 rclpy.shutdown()
-            # 因为可能有其他服务（如 ros_monitor）正在使用 rclpy
+            # Do not call rclpy.shutdown() here - other services (e.g. ros_monitor) may still rely on it.
 
     def _build_graph_snapshot(self, node) -> ROSGraphSnapshot:
-        """构建ROS图谱快照"""
+        """Construct a ROS graph snapshot using the provided rclpy node."""
         with self._lock:
             self._snapshot_id_counter += 1
             snapshot = ROSGraphSnapshot(self._snapshot_id_counter)
@@ -252,14 +250,14 @@ class ROSGraphMonitor:
         snapshot.ros_version = self._ros_version_hint
         snapshot.domain_id = int(os.environ.get("ROS_DOMAIN_ID", "0"))
 
-        # DDS实现检测
+        # Detect the DDS implementation if exposed in the environment.
         rmw_impl = os.environ.get("RMW_IMPLEMENTATION", "")
         if rmw_impl:
             snapshot.dds_impl = rmw_impl
         else:
             snapshot.dds_impl = "Default"
 
-        # 获取节点列表
+        # Populate node details.
         try:
             node_entries = node.get_node_names_and_namespaces()
             for node_name, namespace in node_entries:
@@ -268,7 +266,7 @@ class ROSGraphMonitor:
 
                 full_name = f"{namespace}/{node_name}" if namespace != "/" else f"/{node_name}"
 
-                # 记录首次发现时间
+                # Record the first time we observed this node.
                 with self._lock:
                     if full_name not in self._node_first_seen:
                         self._node_first_seen[full_name] = _now_iso()
@@ -279,13 +277,13 @@ class ROSGraphMonitor:
         except Exception as exc:
             logger.error("获取 ROS 节点列表失败: %s", exc)
 
-        # 获取话题列表
+        # Populate topic details.
         try:
             topic_entries = node.get_topic_names_and_types()
             for topic_name, msg_types in topic_entries:
                 topic_info = TopicInfo(topic_name, msg_types)
 
-                # 获取发布者和订阅者
+                # Capture publishers and subscribers.
                 try:
                     publishers = node.get_publishers_info_by_topic(topic_name)
                     for pub in publishers:
@@ -308,11 +306,11 @@ class ROSGraphMonitor:
         except Exception as exc:
             logger.error("获取 ROS 话题列表失败: %s", exc)
 
-        # 获取服务列表
+        # Populate service details.
         try:
             service_entries = node.get_service_names_and_types()
             for service_name, service_types in service_entries:
-                # 过滤掉参数服务（系统内置）
+                # Exclude parameter services that are part of the core runtime.
                 if "/get_parameters" in service_name or "/set_parameters" in service_name:
                     continue
 
@@ -324,7 +322,7 @@ class ROSGraphMonitor:
         return snapshot
 
     def _detect_changes(self) -> Optional[Dict[str, Any]]:
-        """检测快照变化，返回增量数据"""
+        """Detect differences between consecutive snapshots and return a delta payload."""
         with self._lock:
             if not self._current_snapshot or not self._previous_snapshot:
                 return None
@@ -332,18 +330,18 @@ class ROSGraphMonitor:
             current = self._current_snapshot
             previous = self._previous_snapshot
 
-            # 快速检测：哈希对比
+            # Fast path: compare hashes first.
             if current.compute_hash() == previous.compute_hash():
                 return None
 
-            # 详细对比
+            # Detailed comparison.
             delta = {
                 "type": "delta",
                 "snapshot_id": current.snapshot_id,
                 "timestamp": current.timestamp,
             }
 
-            # 节点变化
+            # Node changes.
             old_nodes = set(previous.nodes.keys())
             new_nodes = set(current.nodes.keys())
 
@@ -355,7 +353,7 @@ class ROSGraphMonitor:
             if removed_nodes:
                 delta["removed_nodes"] = list(removed_nodes)
 
-            # 话题变化
+            # Topic changes.
             old_topics = set(previous.topics.keys())
             new_topics = set(current.topics.keys())
 
@@ -367,19 +365,19 @@ class ROSGraphMonitor:
             if removed_topics:
                 delta["removed_topics"] = list(removed_topics)
 
-            # 检测话题的发布者/订阅者变化
+            # Detect updates to publisher or subscriber sets.
             updated_topics = []
             for topic_name in old_topics & new_topics:
                 old_topic = previous.topics[topic_name]
                 new_topic = current.topics[topic_name]
 
-                if old_topic != new_topic:  # 使用 __eq__ 比较
+                if old_topic != new_topic:  # Uses __eq__ for set comparison.
                     updated_topics.append(new_topic.to_dict())
 
             if updated_topics:
                 delta["updated_topics"] = updated_topics
 
-            # 服务变化
+            # Service changes.
             old_services = set(previous.services.keys())
             new_services = set(current.services.keys())
 
@@ -391,7 +389,7 @@ class ROSGraphMonitor:
             if removed_services:
                 delta["removed_services"] = list(removed_services)
 
-            # 如果没有任何变化，返回None
+            # Bail out when no changes are detected after the detailed pass.
             has_changes = any(k in delta for k in [
                 "added_nodes", "removed_nodes",
                 "added_topics", "removed_topics", "updated_topics",
@@ -401,7 +399,7 @@ class ROSGraphMonitor:
             return delta if has_changes else None
 
     def _build_full_data(self) -> Dict[str, Any]:
-        """构建全量数据"""
+        """Build a full snapshot payload suitable for initial synchronisation."""
         with self._lock:
             if not self._current_snapshot:
                 return {"type": "full", "nodes": [], "topics": [], "services": []}
@@ -428,18 +426,18 @@ class ROSGraphMonitor:
             }
 
     def _broadcast_delta(self, delta: Dict[str, Any]):
-        """广播增量数据到所有WebSocket客户端"""
+        """Broadcast a delta payload to every connected WebSocket client."""
         if not self._event_loop or not self._websocket_clients:
             return
 
-        # 从同步线程调用异步函数
+        # Invoke the async broadcaster from the worker thread.
         asyncio.run_coroutine_threadsafe(
             self._async_broadcast(delta),
             self._event_loop
         )
 
     async def _async_broadcast(self, message: Dict[str, Any]):
-        """异步广播消息"""
+        """Asynchronously deliver a message to each client, pruning dead sockets."""
         dead_clients = set()
         for client in self._websocket_clients:
             try:
@@ -448,29 +446,29 @@ class ROSGraphMonitor:
                 logger.debug(f"发送消息到客户端失败: {e}")
                 dead_clients.add(client)
 
-        # 清理断开的连接
+        # Remove any connections that failed during send.
         for client in dead_clients:
             self._websocket_clients.discard(client)
 
     def register_websocket(self, websocket):
-        """注册WebSocket客户端"""
+        """Register a WebSocket client for subsequent broadcasts."""
         self._websocket_clients.add(websocket)
         logger.info(f"WebSocket客户端已注册，当前连接数: {len(self._websocket_clients)}")
 
     def unregister_websocket(self, websocket):
-        """注销WebSocket客户端"""
+        """Unregister a WebSocket client when it disconnects."""
         self._websocket_clients.discard(websocket)
         logger.info(f"WebSocket客户端已注销，当前连接数: {len(self._websocket_clients)}")
 
     def get_full_snapshot(self) -> Dict[str, Any]:
-        """获取完整快照（用于WebSocket初始连接）"""
+        """Return the latest full snapshot for new WebSocket subscribers."""
         if not self._primed_event.is_set():
             self._primed_event.wait(timeout=2.0)
 
         return self._build_full_data()
 
     def get_topic_details(self, topic_name: str) -> Optional[Dict[str, Any]]:
-        """获取话题详细信息（懒加载）"""
+        """Return a lazily fetched detail view for a specific topic."""
         with self._lock:
             if not self._current_snapshot:
                 return None
@@ -482,7 +480,7 @@ class ROSGraphMonitor:
             return topic.to_dict(include_details=True)
 
     def add_bookmark(self, entity_type: str, entity_name: str) -> bool:
-        """添加用户标记"""
+        """Persist a bookmark for the requested entity type."""
         if entity_type not in self._bookmarks:
             return False
 
@@ -493,7 +491,7 @@ class ROSGraphMonitor:
         return True
 
     def remove_bookmark(self, entity_type: str, entity_name: str) -> bool:
-        """移除用户标记"""
+        """Remove a bookmark for the requested entity type."""
         if entity_type not in self._bookmarks:
             return False
 
@@ -504,7 +502,7 @@ class ROSGraphMonitor:
         return True
 
     def get_bookmarks(self) -> Dict[str, List[str]]:
-        """获取所有标记"""
+        """Return all stored bookmarks grouped by entity type."""
         with self._lock:
             return {
                 "nodes": list(self._bookmarks["nodes"]),
@@ -513,11 +511,11 @@ class ROSGraphMonitor:
             }
 
     def shutdown(self):
-        """关闭监控服务"""
+        """Stop the monitoring thread and clean up related resources."""
         self._stop_event.set()
         if self._worker and self._worker.is_alive():
             self._worker.join(timeout=3.0)
 
 
-# 全局实例
+# Global service instance.
 ros_graph_monitor = ROSGraphMonitor()

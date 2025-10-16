@@ -1,5 +1,5 @@
 """
-journalctl 日志读取服务
+Journalctl reader service used to query and parse system logs.
 """
 from __future__ import annotations
 
@@ -93,8 +93,7 @@ class JournalctlReader:
         keyword: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
-        Execute journalctl and return structured log entries.
-        Always returns entries in从新到旧顺序。
+        Execute journalctl and return structured log entries in newest-first order.
         """
         effective_limit = self._resolve_limit(limit, is_admin)
         cmd, drop_first = self._build_command(
@@ -200,7 +199,7 @@ class JournalctlReader:
 
     def _build_priority(self, value: Optional[str], *, is_admin: bool) -> Optional[str]:
         if not value:
-            # For普通用户未指定级别时，默认展示 INFO 及以上
+            # Default to INFO and above for non-admins when no priority is supplied.
             return "0..7" if is_admin else "0..6"
 
         token = value.strip().lower()
@@ -219,7 +218,7 @@ class JournalctlReader:
             lower = upper = code
 
         if not is_admin:
-            upper = min(upper, 6)  # 普通用户最多到 INFO
+            upper = min(upper, 6)  # Limit standard users to INFO or higher.
 
         return f"{lower}..{upper}"
 
@@ -353,4 +352,3 @@ class JournalctlReader:
 
 
 journalctl_reader = JournalctlReader()
-

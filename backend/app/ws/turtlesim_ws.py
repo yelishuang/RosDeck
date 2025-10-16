@@ -1,6 +1,5 @@
 """
-Turtlesim WebSocket 端点
-实时推送小乌龟的位姿数据
+Turtlesim WebSocket endpoint streaming pose and velocity updates.
 """
 import asyncio
 import json
@@ -14,31 +13,31 @@ logger = logging.getLogger(__name__)
 
 
 class TurtlesimWebSocketManager:
-    """Turtlesim WebSocket 连接管理器"""
+    """Manage WebSocket connections and broadcast turtlesim pose updates."""
 
     def __init__(self):
         self.active_connections: Set[WebSocket] = set()
         self._callback_registered = False
         self._event_loop: Optional[asyncio.AbstractEventLoop] = None
-        self._last_pose: Optional[dict] = None  # 记录上次推送的位姿
+        self._last_pose: Optional[dict] = None  # Track the last pose payload sent to clients.
         self._pose_change_threshold = {
-            'position': 0.01,  # 位置变化阈值（米）
-            'angle': 0.01,     # 角度变化阈值（弧度）
-            'velocity': 0.01   # 速度变化阈值
+            'position': 0.01,  # Position delta threshold (meters).
+            'angle': 0.01,     # Angular delta threshold (radians).
+            'velocity': 0.01   # Velocity delta threshold.
         }
 
     def register_connection(self, websocket: WebSocket):
-        """注册 WebSocket 连接"""
+        """Register a WebSocket connection for turtlesim updates."""
         self.active_connections.add(websocket)
 
-        # 保存事件循环引用（用于线程安全的异步调度）
+        # Cache the event loop for thread-safe scheduling.
         if self._event_loop is None:
             try:
                 self._event_loop = asyncio.get_running_loop()
             except RuntimeError:
                 logger.warning("无法获取运行中的事件循环")
 
-        # 如果是第一个连接，注册 pose 回调
+        # Register the pose callback when the first client connects.
         if not self._callback_registered:
             turtlesim_manager.ros_node.register_pose_callback(self._on_pose_update)
             self._callback_registered = True
@@ -46,10 +45,10 @@ class TurtlesimWebSocketManager:
         logger.info(f"WebSocket 连接已注册，当前连接数: {len(self.active_connections)}")
 
     def unregister_connection(self, websocket: WebSocket):
-        """取消注册 WebSocket 连接"""
+        """Unregister a WebSocket connection."""
         self.active_connections.discard(websocket)
 
-        # 如果没有连接了，取消注册 pose 回调
+        # Remove the pose callback when the final client disconnects.
         if len(self.active_connections) == 0 and self._callback_registered:
             turtlesim_manager.ros_node.unregister_pose_callback(self._on_pose_update)
             self._callback_registered = False
@@ -57,20 +56,20 @@ class TurtlesimWebSocketManager:
         logger.info(f"WebSocket 连接已取消，当前连接数: {len(self.active_connections)}")
 
     def _has_pose_changed(self, new_pose: dict) -> bool:
-        """检测位姿是否发生显著变化"""
+        """Determine whether the pose delta exceeds broadcast thresholds."""
         if self._last_pose is None:
-            return True  # 首次推送
+            return True  # Always broadcast the first pose.
 
-        # 检查位置变化
+        # Evaluate positional change.
         position_change = (
             abs(new_pose['x'] - self._last_pose['x']) +
             abs(new_pose['y'] - self._last_pose['y'])
         )
 
-        # 检查角度变化
+        # Evaluate angular change.
         angle_change = abs(new_pose['theta'] - self._last_pose['theta'])
 
-        # 检查速度变化
+        # Evaluate velocity change.
         linear_vel_change = abs(
             new_pose.get('linear_velocity', 0.0) -
             self._last_pose.get('linear_velocity', 0.0)
@@ -80,7 +79,7 @@ class TurtlesimWebSocketManager:
             self._last_pose.get('angular_velocity', 0.0)
         )
 
-        # 任何一个超过阈值就认为发生了变化
+        # Broadcast when any monitored value crosses its threshold.
         return (
             position_change > self._pose_change_threshold['position'] or
             angle_change > self._pose_change_threshold['angle'] or
@@ -89,15 +88,15 @@ class TurtlesimWebSocketManager:
         )
 
     def _on_pose_update(self, pose_data: dict):
-        """Pose 更新回调（从 ROS 线程调用）"""
-        # 检测位姿是否发生变化
+        """Pose update callback invoked from the turtlesim ROS thread."""
+        # Skip broadcasting when the pose is effectively unchanged.
         if not self._has_pose_changed(pose_data):
-            return  # 没有显著变化，不推送
+            return
 
-        # 更新记录的位姿
+        # Store the latest pose snapshot for delta comparisons.
         self._last_pose = pose_data.copy()
 
-        # 构造消息
+        # Prepare the outbound message.
         message = {
             'type': 'pose',
             'x': pose_data['x'],
@@ -108,7 +107,7 @@ class TurtlesimWebSocketManager:
             'timestamp': pose_data['timestamp']
         }
 
-        # 使用线程安全的方式调度异步任务
+        # Schedule the broadcast back onto the FastAPI event loop.
         if self._event_loop and not self._event_loop.is_closed():
             try:
                 asyncio.run_coroutine_threadsafe(
@@ -121,7 +120,7 @@ class TurtlesimWebSocketManager:
             logger.debug("事件循环不可用，跳过广播")
 
     async def _broadcast(self, message: dict):
-        """广播消息给所有连接"""
+        """Broadcast a JSON payload to every active connection."""
         disconnected = set()
 
         for websocket in self.active_connections:
@@ -131,25 +130,22 @@ class TurtlesimWebSocketManager:
                 logger.error(f"发送消息失败: {e}")
                 disconnected.add(websocket)
 
-        # 移除断开的连接
+        # Remove any sockets that failed during sending.
         for websocket in disconnected:
             self.unregister_connection(websocket)
 
     async def send_to_all(self, message: dict):
-        """发送消息给所有连接（外部调用）"""
+        """Expose broadcasting to external callers."""
         await self._broadcast(message)
 
 
-# 全局管理器实例
+# Shared manager instance reused across handlers.
 ws_manager = TurtlesimWebSocketManager()
 
 
 async def turtlesim_websocket_endpoint(websocket: WebSocket):
-    """
-    Turtlesim WebSocket 端点
-    实时推送小乌龟的位姿和速度数据
-    """
-    # 验证 session
+    """Handle a turtlesim WebSocket connection lifecycle."""
+    # Validate the session before upgrading the connection.
     cookie_session_id = websocket.cookies.get("session_id")
     if not cookie_session_id:
         logger.warning("WebSocket handshake rejected: missing session_id cookie")
@@ -166,11 +162,11 @@ async def turtlesim_websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
     logger.info(f"Turtlesim WebSocket 连接已建立: 用户 {username}")
 
-    # 注册连接
-    ws_manager.register_connection(websocket)
+    # Register the connection for future broadcasts.
+   ws_manager.register_connection(websocket)
 
     try:
-        # 发送初始状态
+        # Send the initial turtlesim status snapshot.
         status = turtlesim_manager.get_status()
         await websocket.send_json({
             'type': 'status',
@@ -178,7 +174,7 @@ async def turtlesim_websocket_endpoint(websocket: WebSocket):
             'turtlesim_status': status
         })
 
-        # 心跳任务
+        # Heartbeat task keeps the connection active.
         async def heartbeat():
             while True:
                 try:
@@ -189,7 +185,7 @@ async def turtlesim_websocket_endpoint(websocket: WebSocket):
 
         heartbeat_task = asyncio.create_task(heartbeat())
 
-        # 处理客户端消息
+        # Process incoming messages from the client.
         while True:
             try:
                 message = await websocket.receive_text()
@@ -197,11 +193,11 @@ async def turtlesim_websocket_endpoint(websocket: WebSocket):
                 msg_type = data.get('type')
 
                 if msg_type == 'pong':
-                    # 心跳响应
+                    # Heartbeat acknowledgement.
                     logger.debug(f"收到心跳响应: {username}")
 
                 elif msg_type == 'get_status':
-                    # 获取状态
+                    # Return current turtlesim status.
                     status = turtlesim_manager.get_status()
                     await websocket.send_json({
                         'type': 'status_response',
@@ -209,7 +205,7 @@ async def turtlesim_websocket_endpoint(websocket: WebSocket):
                     })
 
                 elif msg_type == 'send_velocity':
-                    # 发送速度命令
+                    # Relay velocity command to turtlesim.
                     linear = data.get('linear', 0.0)
                     angular = data.get('angular', 0.0)
                     success = turtlesim_manager.send_velocity_command(linear, angular)
@@ -221,7 +217,7 @@ async def turtlesim_websocket_endpoint(websocket: WebSocket):
                         'angular': angular
                     })
 
-                    # 广播速度命令给其他客户端
+                    # Broadcast velocity update to all connected clients.
                     await ws_manager.send_to_all({
                         'type': 'velocity',
                         'linear': linear,
@@ -239,7 +235,7 @@ async def turtlesim_websocket_endpoint(websocket: WebSocket):
                 break
 
     finally:
-        # 清理
+        # Cancel heartbeat and unregister the connection.
         heartbeat_task.cancel()
         try:
             await heartbeat_task

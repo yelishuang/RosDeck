@@ -1,6 +1,5 @@
 """
-ROS 2 监控服务
-通过长期驻留的 rclpy 节点获取节点/话题/服务统计
+ROS 2 monitoring service that gathers node, topic, and service metrics via a resident rclpy node.
 """
 import copy
 import logging
@@ -13,7 +12,7 @@ from typing import Any, Dict, Optional
 try:
     import rclpy
     from rclpy.executors import SingleThreadedExecutor
-except ImportError:  # pragma: no cover - 仅在缺失 ROS 环境时触发
+except ImportError:  # pragma: no cover - triggered only when ROS is unavailable.
     rclpy = None  # type: ignore
     SingleThreadedExecutor = None  # type: ignore
 
@@ -21,11 +20,11 @@ logger = logging.getLogger(__name__)
 
 
 class ROSMonitor:
-    """ROS 2 监控服务（基于 rclpy 后台节点）"""
+    """Maintains a background rclpy node to collect ROS graph statistics."""
     
     def __init__(self):
         self._node_name = "rosdeck_stats_monitor"
-        self._update_interval = 5.0  # 刷新间隔（秒）
+        self._update_interval = 5.0  # Refresh interval in seconds.
         self._ros_version_hint = self._resolve_ros_version()
         
         self._stats: Dict[str, Any] = self._default_stats()
@@ -47,7 +46,7 @@ class ROSMonitor:
         self._worker.start()
     
     def _default_stats(self) -> Dict[str, Any]:
-        """构造默认统计数据"""
+        """Construct the default statistics payload returned when ROS is unavailable."""
         return {
             "active_nodes": 0,
             "topics_count": 0,
@@ -59,20 +58,20 @@ class ROSMonitor:
     
     @staticmethod
     def _resolve_ros_version() -> str:
-        """尝试推断 ROS 版本"""
+        """Attempt to derive the ROS distribution version from the environment."""
         distro = os.environ.get("ROS_DISTRO", "").strip()
         if distro:
             return f"ROS 2 {distro.capitalize()}"
         return "ROS 2"
     
     def _refresh_loop(self):
-        """后台刷新循环：维护 rclpy 节点并定期采样"""
+        """Background loop that advances the executor and captures periodic snapshots."""
         node = None
         executor = None
         initialized = False
 
         try:
-            # 检查 rclpy 是否已初始化
+            # Initialise rclpy if another component has not already done so.
             if not rclpy.ok():
                 rclpy.init(args=None)
                 initialized = True
@@ -104,11 +103,10 @@ class ROSMonitor:
                     node.destroy_node()
                 except Exception as e:
                     logger.debug("销毁节点失败: %s", e)
-            # 注意：不要在这里调用 rclpy.shutdown()
-            # 因为可能有其他服务（如 ros_graph_monitor）正在使用 rclpy
+            # Do not invoke rclpy.shutdown() here; other services (e.g., ros_graph_monitor) may share the context.
     
     def _build_stats_snapshot(self, node) -> Dict[str, Any]:
-        """采集当前 ROS 图谱数据"""
+        """Collect a snapshot of the current ROS graph activity."""
         try:
             node_entries = node.get_node_names_and_namespaces()
             active_nodes = sum(
@@ -147,8 +145,7 @@ class ROSMonitor:
     @staticmethod
     def calculate_stability(active_nodes: int) -> float:
         """
-        计算系统稳定性
-        简单策略: 基于节点数量估算
+        Estimate a simple stability metric as a function of active node count.
         """
         if active_nodes == 0:
             return 0.0
@@ -157,7 +154,7 @@ class ROSMonitor:
         return 99.8
     
     def get_stats(self) -> Dict[str, Any]:
-        """获取完整的 ROS 统计数据"""
+        """Return the latest cached ROS metrics."""
         if not self._primed_event.is_set():
             self._primed_event.wait(timeout=1.0)
         
@@ -165,11 +162,11 @@ class ROSMonitor:
             return copy.deepcopy(self._stats)
     
     def shutdown(self):
-        """测试或应用关闭时调用"""
+        """Gracefully stop the monitoring thread (used during tests or shutdown)."""
         self._stop_event.set()
         if self._worker and self._worker.is_alive():
             self._worker.join(timeout=2.0)
 
 
-# 全局实例
+# Shared singleton instance.
 ros_monitor = ROSMonitor()

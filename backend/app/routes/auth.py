@@ -1,5 +1,5 @@
 """
-认证相关路由
+Authentication endpoints for handling user and admin login flows.
 """
 from fastapi import APIRouter, Request, Response, Depends, HTTPException
 from fastapi.responses import JSONResponse
@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/auth", tags=["认证"])
 
 
-# ==================== 数据模型 ====================
+# ==================== Data models ====================
 
 class LoginRequest(BaseModel):
     username: str
@@ -40,11 +40,11 @@ class AdminVerifyResponse(BaseModel):
     session_expires_in: int = 0
 
 
-# ==================== 辅助函数 ====================
+# ==================== Helper utilities ====================
 
 def authenticate_linux_user(username: str, password: str) -> bool:
     """
-    使用 Linux PAM 验证用户
+    Validate user credentials against the host PAM stack.
     """
     try:
         p = pam.pam()
@@ -54,7 +54,7 @@ def authenticate_linux_user(username: str, password: str) -> bool:
         return False
 
 
-# ==================== 路由处理器 ====================
+# ==================== Route handlers ====================
 
 @router.post(
     "/login",
@@ -65,16 +65,16 @@ def authenticate_linux_user(username: str, password: str) -> bool:
 )
 async def login(body: LoginRequest, response: Response):
     """
-    登录接口 - 使用 Linux 系统账号验证
-    
-    前端期望:
-    - 成功: 200 + {ok:true, redirect:"../index.html"}
-    - 失败: 401 + {ok:false, code:"AUTH_INVALID", message:"..."}
+    Authenticate a RosDeck user via Linux system credentials and issue a session cookie.
+
+    The front-end expects:
+    - Success: HTTP 200 with {ok: true, redirect: "../index.html"}
+    - Failure: HTTP 401 with {ok: false, code: "AUTH_INVALID", message: "..."}
     """
     username = body.username.strip()
     password = body.password.strip()
     
-    # 基本验证
+    # Basic payload validation.
     if not username or not password:
         raise HTTPException(
             status_code=401,
@@ -85,7 +85,7 @@ async def login(body: LoginRequest, response: Response):
             }
         )
     
-    # 使用 Linux PAM 验证
+    # Authenticate against the local PAM stack.
     if not authenticate_linux_user(username, password):
         logger.warning(f"Failed login attempt for user: {username}")
         raise HTTPException(
@@ -99,15 +99,15 @@ async def login(body: LoginRequest, response: Response):
     
     logger.info(f"User {username} logged in successfully")
     
-    # 设置 HttpOnly + SameSite Cookie
+    # Issue a session cookie with constrained browser access.
     session_id = f"session_{username}_{int(time.time())}"
     response.set_cookie(
         key="session_id",
         value=session_id,
-        httponly=True,      # 防止 JavaScript 访问(防 XSS)
-        secure=False,       # 开发环境 HTTP,生产环境改为 True
-        samesite="strict",  # 防止 CSRF 攻击(与 CSRF Token 双重保护)
-        max_age=3600 * 24,  # 24小时
+        httponly=True,      # Prevent JavaScript access to mitigate XSS.
+        secure=False,       # HTTP during development; enforce True behind HTTPS.
+        samesite="strict",  # Strict mode to reinforce CSRF protections.
+        max_age=3600 * 24,  # 24-hour session lifetime.
         path="/"
     )
     
@@ -121,12 +121,12 @@ async def login(body: LoginRequest, response: Response):
 @router.post("/logout")
 async def logout(response: Response):
     """
-    登出接口
+    Clear user-facing session cookies.
     """
-    # 清除普通用户 session
+    # Remove the regular user session cookie.
     response.delete_cookie(key="session_id", path="/")
     
-    # 清除管理员 session
+    # Remove any admin session cookie.
     response.delete_cookie(key="admin_session_id", path="/")
     
     return {"ok": True, "message": "登出成功"}
@@ -141,10 +141,7 @@ async def logout(response: Response):
 )
 async def verify_admin(body: AdminVerifyRequest, response: Response):
     """
-    验证管理员权限
-    
-    使用 root 用户密码验证
-    验证成功后创建管理员 session(有效期 30 分钟)
+    Validate admin privileges by confirming the root password and minting an admin session.
     """
     password = body.password.strip()
     
@@ -157,7 +154,7 @@ async def verify_admin(body: AdminVerifyRequest, response: Response):
             }
         )
     
-    # 使用特权助手验证 root 用户
+    # Defer to the privileged helper to verify the root password.
     if not verify_root_password(password):
         logger.warning(f"Failed admin verification attempt")
         raise HTTPException(
@@ -168,13 +165,13 @@ async def verify_admin(body: AdminVerifyRequest, response: Response):
             }
         )
     
-    # 创建管理员 session
+    # Create an admin session with the configured timeout.
     admin_session_id = admin_auth.create_session("root")
     session_expires_in = admin_auth.session_timeout
     
     logger.info(f"Admin verification successful, session created: {admin_session_id}")
     
-    # 设置管理员 Cookie
+    # Persist the admin session cookie.
     response.set_cookie(
         key="admin_session_id",
         value=admin_session_id,
@@ -200,7 +197,7 @@ async def verify_admin(body: AdminVerifyRequest, response: Response):
 )
 async def admin_logout(request: Request, response: Response):
     """
-    退出管理员模式，撤销 session 并清理 Cookie
+    Terminate the admin session and clear the cookie.
     """
     admin_session_id = request.cookies.get("admin_session_id")
     if admin_session_id:

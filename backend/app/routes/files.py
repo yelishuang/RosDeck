@@ -1,5 +1,5 @@
 """
-文件传输相关路由
+File transfer and filesystem navigation endpoints.
 """
 from fastapi import (
     APIRouter,
@@ -23,18 +23,18 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/files", tags=["文件传输"])
 
-# ==================== 常量 ====================
+# ==================== Constants ====================
 DEFAULT_USER_ROOT = Path.home()
 ADMIN_ROOT = Path("/")
-MAX_UPLOAD_SIZE = 50 * 1024 * 1024  # 50 MB
-UPLOAD_CHUNK_SIZE = 1024 * 1024  # 1 MB
+MAX_UPLOAD_SIZE = 50 * 1024 * 1024  # 50 MB cap.
+UPLOAD_CHUNK_SIZE = 1024 * 1024  # 1 MB streaming chunk size.
 
 
-# ==================== 工具函数 ====================
+# ==================== Helper utilities ====================
 
 def _is_admin(request: Request) -> bool:
     """
-    根据 admin_session_id Cookie 判断是否为管理员模式
+    Inspect the admin session cookie to determine elevation.
     """
     admin_session_id = request.cookies.get("admin_session_id")
     if not admin_session_id:
@@ -43,7 +43,7 @@ def _is_admin(request: Request) -> bool:
     if admin_auth.validate_session(admin_session_id):
         return True
 
-    # 如果 session 已失效则顺带清理
+    # Purge expired sessions when validation fails.
     admin_auth.cleanup_expired_sessions()
     return False
 
@@ -58,7 +58,7 @@ def _normalize_path(
     expect_directory: bool = False,
 ) -> Path:
     """
-    将客户端传入的路径转换为服务器端路径，并校验越权访问
+    Resolve and validate the requested filesystem path.
     """
     root = _get_root(request)
     is_admin = root == ADMIN_ROOT
@@ -96,7 +96,7 @@ def _normalize_path(
 
 def _client_path(path: Path, root: Path) -> str:
     """
-    转换为前端可使用的路径
+    Convert an absolute path to the client-facing representation.
     """
     if root == ADMIN_ROOT:
         return str(path)
@@ -104,13 +104,13 @@ def _client_path(path: Path, root: Path) -> str:
         rel = path.relative_to(root)
         return "" if str(rel) == "." else str(rel)
     except ValueError:
-        # 保险，如果越界，返回空字符串
+        # Fallback: if the path escapes the root, return an empty string.
         return ""
 
 
 def _build_entry(item: Path, root: Path) -> Dict[str, Any]:
     """
-    构造目录项信息
+    Build a directory entry payload for the client.
     """
     try:
         stat_result = item.stat()
@@ -142,7 +142,7 @@ def _build_breadcrumbs(current: Path, root: Path) -> List[Dict[str, str]]:
     try:
         relative = current.relative_to(root)
     except ValueError:
-        # 越界时直接返回完整路径
+        # If the path is outside the allowed root, expose the absolute path.
         breadcrumbs.append({"name": str(current), "path": str(current)})
         return breadcrumbs
 
@@ -155,7 +155,7 @@ def _build_breadcrumbs(current: Path, root: Path) -> List[Dict[str, str]]:
     return breadcrumbs
 
 
-# ==================== 路由 ====================
+# ==================== Route handlers ====================
 
 @router.get("/list")
 async def list_directory(
@@ -163,7 +163,7 @@ async def list_directory(
     path: Optional[str] = Query(default=None, description="要浏览的路径"),
 ):
     """
-    列出目录内容
+    List the contents of a directory rooted at the permitted base path.
     """
     try:
         root = _get_root(request)
@@ -210,7 +210,7 @@ async def upload_file(
     file: UploadFile = File(...),
 ):
     """
-    上传文件到指定目录
+    Upload a file to the target directory.
     """
     target_dir = _normalize_path(request, directory or "", expect_directory=True)
     destination = target_dir / file.filename
@@ -271,7 +271,7 @@ async def download_file(
     path: str = Query(..., description="要下载的文件路径"),
 ):
     """
-    下载指定文件
+    Download a file from the permitted directory tree.
     """
     file_path = _normalize_path(request, path)
 
@@ -305,7 +305,7 @@ async def delete_file(
     path: str = Query(..., description="要删除的文件路径"),
 ):
     """
-    删除指定文件
+    Delete a file from the permitted directory tree.
     """
     file_path = _normalize_path(request, path)
 

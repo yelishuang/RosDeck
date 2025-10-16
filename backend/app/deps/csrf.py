@@ -1,5 +1,5 @@
 """
-CSRF 保护中间件
+CSRF protection helper backed by an in-memory token store.
 """
 from fastapi import Request, HTTPException, Header
 from secrets import token_urlsafe
@@ -7,17 +7,17 @@ from typing import Optional
 
 class CSRFProtection:
     def __init__(self):
-        # 生产环境应使用 Redis，这里用内存存储
+        # In production this should leverage a shared store (e.g. Redis); in-memory is for dev use.
         self.tokens = {}
     
     def generate_token(self, identifier: str = "global") -> str:
-        """生成 CSRF Token"""
+        """Generate a CSRF token for the provided identifier."""
         token = token_urlsafe(32)
         self.tokens[identifier] = token
         return token
     
     def get_token(self, identifier: str = "global") -> Optional[str]:
-        """获取已生成的 Token"""
+        """Retrieve a previously generated token if present."""
         return self.tokens.get(identifier)
     
     async def validate_token(
@@ -25,7 +25,7 @@ class CSRFProtection:
         request: Request,
         x_csrf_token: Optional[str] = Header(None, alias="X-CSRF-Token")
     ):
-        """验证 CSRF Token（依赖注入使用）"""
+        """Validate that the request includes the expected CSRF token."""
         identifier = "global"
         expected_token = self.tokens.get(identifier)
         
@@ -35,5 +35,5 @@ class CSRFProtection:
         if not x_csrf_token or x_csrf_token != expected_token:
             raise HTTPException(status_code=403, detail="Invalid CSRF token")
 
-# 全局实例
+# Shared singleton instance.
 csrf_protection = CSRFProtection()

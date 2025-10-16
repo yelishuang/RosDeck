@@ -1,5 +1,5 @@
 """
-journalctl 日志查询路由
+Journalctl log query endpoints.
 """
 from __future__ import annotations
 
@@ -25,7 +25,7 @@ def _is_admin(request: Request) -> bool:
 
 @router.get("/metadata")
 async def get_metadata(request: Request):
-    """返回可用的日志过滤选项与默认限制。"""
+    """Return available journal filters and default limits."""
     is_admin = _is_admin(request)
     accessible, message = journalctl_reader.probe_access(is_admin=is_admin)
 
@@ -57,7 +57,7 @@ async def query_logs(
     since: Optional[str] = Query(default=None, description="起始时间 ISO8601"),
     until: Optional[str] = Query(default=None, description="结束时间 ISO8601"),
 ):
-    """包装 journalctl 的查询接口。"""
+    """Proxy journalctl queries with role-aware limits and validation."""
     is_admin = _is_admin(request)
 
     try:
@@ -82,4 +82,3 @@ async def query_logs(
         ) from exc
 
     return result
-

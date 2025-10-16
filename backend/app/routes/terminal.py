@@ -1,6 +1,5 @@
 """
-终端 WebSocket 路由
-提供实时终端访问
+WebSocket endpoints providing interactive terminal access.
 """
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends, Request
 import asyncio
@@ -22,10 +21,11 @@ router = APIRouter(prefix="/api/terminal", tags=["terminal"])
 @router.websocket("/ws")
 async def terminal_websocket(websocket: WebSocket):
     """
-    WebSocket 终端连接
-    根据 Cookie 验证用户身份:
-    - session_id: 普通登录会话,解析出用户名
-    - admin_session_id: 若存在且有效则视为管理员
+    Manage authenticated WebSocket terminal sessions with optional admin privileges.
+
+    Authentication is derived from cookies:
+    - session_id: regular user session, resolves to a username.
+    - admin_session_id: marks the session as elevated when present and valid.
     """
     cookie_session_id = websocket.cookies.get("session_id")
     if not cookie_session_id:
@@ -40,7 +40,7 @@ async def terminal_websocket(websocket: WebSocket):
         await websocket.close(code=4401)
         return
 
-    # 检查管理员状态
+    # Determine whether the user holds an active admin session.
     admin_session_id = websocket.cookies.get("admin_session_id")
     admin_auth.cleanup_expired_sessions()
     is_admin = bool(
@@ -54,13 +54,13 @@ async def terminal_websocket(websocket: WebSocket):
 
     await websocket.accept()
 
-    # 生成会话 ID
+    # Generate a unique identifier for tracking the WebSocket session.
     ws_session_id = str(uuid.uuid4())
 
-    # 创建终端会话
+    # Allocate a terminal session bound to the user context.
     session = terminal_manager.create_session(ws_session_id, username, is_admin)
 
-    # 启动 PTY
+    # Initialize the pseudo-terminal backing the session.
     pty_started = await session.start_pty()
     if not pty_started:
         await websocket.send_json({
@@ -70,7 +70,7 @@ async def terminal_websocket(websocket: WebSocket):
         await websocket.close(code=1011)
         return
 
-    # 下发会话信息,供前端展示
+    # Send session metadata so the client can render status.
     await websocket.send_json({
         'type': 'session_info',
         'username': username,
@@ -78,7 +78,7 @@ async def terminal_websocket(websocket: WebSocket):
         'admin_session_expires_in': admin_remaining
     })
 
-    # 发送欢迎消息
+    # Emit a welcome banner.
     welcome_msg = f"\r\n欢迎使用 RosDeck 终端\r\n"
     if is_admin:
         welcome_msg += f"管理员模式已激活\r\n"
@@ -91,16 +91,16 @@ async def terminal_websocket(websocket: WebSocket):
         'data': welcome_msg
     })
 
-    # 启动清理任务
+    # Ensure the background cleanup coroutine is running.
     await terminal_manager.start_cleanup_task()
 
-    # 创建读取任务
+    # Spawn a reader task that streams PTY output.
     async def read_from_pty():
-        """从 PTY 读取输出并发送到客户端"""
+        """Read PTY output and forward it to the client."""
         while True:
             try:
                 if session.pty and session.pty.isalive():
-                    # 读取 PTY 输出
+                    # Pull data from the pseudo-terminal.
                     data = await session.read()
                     if data:
                         logger.debug("WS %s -> client output: %r", ws_session_id, data)
@@ -111,7 +111,7 @@ async def terminal_websocket(websocket: WebSocket):
                     else:
                         await asyncio.sleep(0.01)
                 else:
-                    # PTY 进程已终止
+                    # Exit if the PTY process has terminated.
                     await websocket.send_json({
                         'type': 'error',
                         'message': '终端会话已结束'
@@ -121,14 +121,14 @@ async def terminal_websocket(websocket: WebSocket):
                 logger.error(f"Error reading from PTY: {e}")
                 break
 
-    # 启动读取任务
+    # Begin streaming PTY output.
     read_task = asyncio.create_task(read_from_pty())
 
     try:
-        # 处理客户端输入
+        # Handle inbound client messages.
         while True:
             try:
-                # 接收客户端消息
+                # Receive a message frame from the client.
                 message = await websocket.receive_text()
                 data = json.loads(message)
                 logger.debug("WS %s <- client message: %s", ws_session_id, message)
@@ -136,19 +136,19 @@ async def terminal_websocket(websocket: WebSocket):
                 msg_type = data.get('type')
 
                 if msg_type == 'input':
-                    # 用户输入
+                    # Forward interactive input to the PTY.
                     input_data = data.get('data', '')
                     await session.write(input_data)
 
                 elif msg_type == 'resize':
-                    # 调整终端大小
+                    # Resize the PTY to match the client dimensions.
                     rows = data.get('rows', 24)
                     cols = data.get('cols', 80)
                     session.resize(rows, cols)
                     logger.debug("WS %s resize -> rows=%s cols=%s", ws_session_id, rows, cols)
 
                 elif msg_type == 'command_check':
-                    # 检查命令是否允许执行
+                    # Validate whether the requested command is allowed.
                     command = data.get('command', '')
                     allowed, reason = terminal_manager.check_command_allowed(
                         command, session.is_admin
@@ -162,7 +162,7 @@ async def terminal_websocket(websocket: WebSocket):
                             'command': command
                         })
                     else:
-                        # 记录命令
+                        # Persist the command for session history.
                         session.add_command(command)
                         logger.debug("WS %s command allowed: %s", ws_session_id, command)
                         await websocket.send_json({
@@ -171,7 +171,7 @@ async def terminal_websocket(websocket: WebSocket):
                         })
 
                 elif msg_type == 'ping':
-                    # 心跳
+                    # Respond to heartbeat probes.
                     logger.debug("WS %s ping", ws_session_id)
                     await websocket.send_json({'type': 'pong'})
 
@@ -185,7 +185,7 @@ async def terminal_websocket(websocket: WebSocket):
                 break
 
     finally:
-        # 清理
+        # Perform cleanup regardless of exit path.
         read_task.cancel()
         try:
             await read_task
@@ -199,9 +199,9 @@ async def terminal_websocket(websocket: WebSocket):
 @router.get("/history")
 async def get_command_history(username: str = Depends(get_current_username)):
     """
-    获取命令历史记录
+    Return the command history for the active terminal session.
     """
-    # 查找该用户的活跃会话
+    # Return history from any live session owned by the user.
     for session in terminal_manager.sessions.values():
         if session.username == username:
             return {
@@ -222,7 +222,7 @@ async def get_session_info(
     username: str = Depends(get_current_username)
 ):
     """
-    返回当前终端相关的会话信息 (用户名 / 管理员状态 / 管理员剩余时间)
+    Expose session metadata including admin status and remaining elevation time.
     """
     admin_session_id = request.cookies.get("admin_session_id")
     admin_auth.cleanup_expired_sessions()

@@ -1,5 +1,5 @@
 """
-网络管理相关路由
+Network management and diagnostics API endpoints.
 """
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, validator
@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/network", tags=["网络管理"])
 
 
-# ==================== 数据模型 ====================
+# ==================== Data models ====================
 
 class InterfaceToggleRequest(BaseModel):
     interface: str
@@ -24,7 +24,7 @@ class InterfaceToggleRequest(BaseModel):
     def validate_interface(cls, v):
         if not v or len(v) > 64:
             raise ValueError('无效的接口名称')
-        # 简单的安全检查，防止命令注入
+        # Basic safeguard to discourage command injection via the interface name.
         if not v.replace('-', '').replace('_', '').replace('.', '').isalnum():
             raise ValueError('接口名称包含非法字符')
         return v
@@ -66,7 +66,7 @@ class PingRequest(BaseModel):
     def validate_target(cls, v):
         if not v or len(v) > 255:
             raise ValueError('无效的目标地址')
-        # 简单的安全检查
+        # Basic sanitisation to filter unexpected characters.
         allowed_chars = set('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.-:')
         if not all(c in allowed_chars for c in v):
             raise ValueError('目标地址包含非法字符')
@@ -79,14 +79,12 @@ class PingRequest(BaseModel):
         return v
 
 
-# ==================== 路由处理器 ====================
+# ==================== Route handlers ====================
 
 @router.get("/interfaces")
 async def get_interfaces():
     """
-    获取所有网络接口信息
-
-    返回: 接口列表(名称、IP、MAC、状态、流量统计)
+    Retrieve network interface information including address data and utilisation metrics.
     """
     try:
         interfaces = network_monitor.get_interfaces()
@@ -108,12 +106,7 @@ async def get_traffic_history(
     window: str = Query(default="5min", regex="^(1min|5min|15min)$")
 ):
     """
-    获取流量历史数据
-
-    Args:
-        window: 时间窗口 ("1min", "5min", "15min")
-
-    返回: 包含时间戳和上传/下载速率的数据点列表
+    Provide historical traffic samples for the requested window (1min, 5min, 15min).
     """
     try:
         history = network_monitor.get_traffic_history(window)
@@ -132,9 +125,7 @@ async def get_traffic_history(
 @router.get("/connections")
 async def get_connections():
     """
-    获取网络连接信息
-
-    返回: 连接列表或汇总统计(取决于权限)
+    Return active network connections or aggregated statistics depending on privileges.
     """
     try:
         connections = network_monitor.get_connections()
@@ -156,10 +147,7 @@ async def get_connections():
 )
 async def toggle_interface(body: InterfaceToggleRequest):
     """
-    启用/禁用网络接口
-
-    需要管理员权限
-    需要 CSRF Token
+    Enable or disable a network interface. Requires admin privileges and a valid CSRF token.
     """
     logger.info(f"接口切换请求: {body.interface}, enable={body.enable}")
 
@@ -186,10 +174,7 @@ async def toggle_interface(body: InterfaceToggleRequest):
 )
 async def config_interface(body: IPConfigRequest):
     """
-    配置静态IP地址
-
-    需要管理员权限
-    需要 CSRF Token
+    Apply static IP settings to an interface. Requires admin privileges and CSRF validation.
     """
     logger.info(
         f"IP配置请求: {body.interface}, "
@@ -224,10 +209,7 @@ async def config_interface(body: IPConfigRequest):
 )
 async def diagnostic_ping(body: PingRequest):
     """
-    执行 ping 诊断
-
-    需要管理员权限
-    需要 CSRF Token
+    Execute a ping diagnostic. Requires admin privileges and CSRF validation.
     """
     logger.info(f"Ping请求: target={body.target}, count={body.count}")
 
@@ -239,25 +221,24 @@ async def diagnostic_ping(body: PingRequest):
     return result
 
 
-# ==================== 后台采样任务 ====================
+# ==================== Background sampling task ====================
 
 @router.on_event("startup")
 async def start_traffic_sampling():
     """
-    应用启动时启动流量采样任务
-    注意：这是一个简化实现，实际应使用 BackgroundTasks 或 asyncio.create_task
+    Start a traffic sampling coroutine during application startup.
     """
     import asyncio
 
     async def sample_loop():
-        """后台采样循环"""
+        """Continuously sample traffic metrics in the background."""
         while True:
             try:
                 network_monitor.sample_traffic()
             except Exception as e:
                 logger.error(f"流量采样失败: {e}")
-            await asyncio.sleep(5)  # 每5秒采样一次
+            await asyncio.sleep(5)  # Sample every five seconds.
 
-    # 启动后台任务
+    # Launch the asynchronous sampling task.
     asyncio.create_task(sample_loop())
     logger.info("网络流量采样任务已启动(5秒间隔)")

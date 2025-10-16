@@ -1,5 +1,5 @@
 """
-rosbag2 录制/回放管理
+rosbag2 recording and playback management utilities.
 """
 from __future__ import annotations
 
@@ -18,7 +18,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 try:
     import yaml  # type: ignore
-except ImportError:  # pragma: no cover - 运行环境缺少 PyYAML
+except ImportError:  # pragma: no cover - PyYAML not available in this runtime.
     yaml = None  # type: ignore
 
 logger = logging.getLogger(__name__)
@@ -83,7 +83,7 @@ class RecordingSession:
 
 
 class RosbagManager:
-    """管理 rosbag2 录制、列表、删除"""
+    """Coordinate rosbag2 recording sessions, playback, and archive management."""
 
     PRESET_FILE = Path(os.path.expanduser("~/.config/rosdeck/recording_presets.json"))
 
@@ -110,7 +110,7 @@ class RosbagManager:
                     return data
             except Exception as exc:
                 logger.warning("加载录制预设失败: %s", exc)
-        # 内置默认模板
+        # Built-in fallback presets.
         return {
             "default_system": {
                 "label": "系统关键主题",
@@ -214,7 +214,7 @@ class RosbagManager:
         with self._lock:
             for recording_id, session in list(self._recordings.items()):
                 if not session.is_active():
-                    # 自动清理已结束
+                    # Remove sessions that have already terminated.
                     session.process.wait(timeout=1.0)
                     del self._recordings[recording_id]
                     continue
@@ -228,7 +228,7 @@ class RosbagManager:
         metadata = _load_metadata(session.output_path)
         message_count = None
         if metadata:
-            # metadata.yaml 的结构: metadata["topics_with_message_count"]
+            # metadata.yaml exposes topic counts via metadata["topics_with_message_count"].
             try:
                 total = sum(item.get("message_count", 0) for item in metadata.get("topics_with_message_count", []))
                 message_count = int(total)
@@ -436,5 +436,5 @@ class RosbagManager:
         return total
 
 
-# 全局实例
+# Shared singleton instance.
 rosbag_manager = RosbagManager()

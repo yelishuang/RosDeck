@@ -1,5 +1,5 @@
 """
-简化版限流器（基于内存）
+Lightweight in-memory rate limiter for login attempts.
 """
 from fastapi import Request, HTTPException
 from datetime import datetime, timedelta
@@ -12,19 +12,17 @@ class RateLimiter:
         self.attempts = defaultdict(list)  
     
     async def check_rate_limit(self, request: Request):
-        """
-        检查登录限流（依赖注入使用）
-        """
+        """FastAPI dependency that enforces IP-based rate limiting."""
         client_ip = request.client.host
         now = datetime.now()
         cutoff = now - timedelta(seconds=self.window_seconds)
         
-        # 清理过期记录
+        # Remove any attempts outside the window.
         self.attempts[client_ip] = [
             t for t in self.attempts[client_ip] if t > cutoff
         ]
         
-        # 检查是否超限
+        # Deny the request when the maximum number of attempts is exceeded.
         if len(self.attempts[client_ip]) >= self.max_attempts:
             oldest = min(self.attempts[client_ip])
             retry_after = int((oldest + timedelta(seconds=self.window_seconds) - now).total_seconds())
@@ -35,8 +33,8 @@ class RateLimiter:
                 headers={"Retry-After": str(max(retry_after, 1))}
             )
         
-        # 记录本次尝试
+        # Track the current request.
         self.attempts[client_ip].append(now)
 
-# 全局实例
+# Shared singleton instance.
 rate_limiter = RateLimiter()

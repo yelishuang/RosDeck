@@ -1,5 +1,5 @@
 """
-节点生命周期与诊断管理
+Manage ROS node lifecycle transitions alongside diagnostics helpers.
 """
 from __future__ import annotations
 
@@ -56,7 +56,7 @@ class _LifecycleUnavailable:
 
 
 class NodeLifecycleManager:
-    """管理生命周期节点的启停、日志、状态"""
+    """Perform lifecycle transitions, log retrieval, and status queries for ROS nodes."""
 
     def __init__(self):
         if rclpy is None or Node is None:
@@ -199,7 +199,7 @@ class NodeLifecycleManager:
 
     # Logs --------------------------------------------------------------------
     def get_logs(self, node_name: str, line_limit: int = 200) -> Dict[str, Any]:
-        """从 ~/.ros/log 下获取节点日志"""
+        """Collect node logs from ~/.ros/log, tailing the requested number of lines."""
         log_dir = Path(os.path.expanduser("~/.ros/log"))
         latest_link = log_dir / "latest"
         paths: List[Path] = []
@@ -207,7 +207,7 @@ class NodeLifecycleManager:
         if latest_link.exists():
             paths.extend(self._collect_logs(latest_link, node_name))
 
-        # 如果 latest 为空，选最近一次
+        # Fallback to the most recent run if the "latest" symlink is empty.
         if not paths:
             candidates = sorted(log_dir.glob("*"), key=lambda p: p.stat().st_mtime if p.exists() else 0, reverse=True)
             for candidate in candidates:
@@ -238,7 +238,7 @@ class NodeLifecycleManager:
 
     # Startup info ------------------------------------------------------------
     def get_startup_info(self, node_full_name: str) -> Dict[str, Any]:
-        """调用 ros2 node info --include-parameter-services 获取启动信息"""
+        """Invoke `ros2 node info --include-parameter-services` to gather startup metadata."""
         cmd = ["ros2", "node", "info", node_full_name, "--include-parameter-services"]
         logger.info("获取节点启动信息: %s", " ".join(cmd))
         proc = subprocess.run(cmd, capture_output=True, text=True)
@@ -250,6 +250,5 @@ class NodeLifecycleManager:
         }
 
 
-# 全局实例
+# Shared singleton instance.
 node_lifecycle_manager = NodeLifecycleManager()
-

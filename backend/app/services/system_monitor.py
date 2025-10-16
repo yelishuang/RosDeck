@@ -1,6 +1,5 @@
 """
-系统监控服务
-提供 CPU、内存、磁盘、网络等系统信息
+System monitoring utilities providing CPU, memory, disk, and network metrics.
 """
 import psutil
 import time
@@ -12,34 +11,34 @@ logger = logging.getLogger(__name__)
 
 
 class SystemMonitor:
-    """系统监控服务"""
+    """Collects and caches host-level utilisation metrics."""
     
     def __init__(self):
         self._cache = {}
-        self._cache_duration = 2  # 缓存 2 秒
+        self._cache_duration = 2  # Cache entries for two seconds.
         self._last_net_io = None
         self._last_net_time = None
     
     def _is_cache_valid(self, key: str) -> bool:
-        """检查缓存是否有效"""
+        """Return True when the cached entry is still fresh."""
         if key not in self._cache:
             return False
         cache_time, _ = self._cache[key]
         return (time.time() - cache_time) < self._cache_duration
     
     def _get_cached(self, key: str) -> Any:
-        """获取缓存数据"""
+        """Fetch a cached value when available."""
         if self._is_cache_valid(key):
             _, data = self._cache[key]
             return data
         return None
     
     def _set_cache(self, key: str, data: Any):
-        """设置缓存"""
+        """Persist a value in the in-memory cache."""
         self._cache[key] = (time.time(), data)
     
     def get_uptime(self) -> int:
-        """获取系统运行时长(秒)"""
+        """Return the system uptime in seconds."""
         try:
             return int(time.time() - psutil.boot_time())
         except Exception as e:
@@ -47,7 +46,7 @@ class SystemMonitor:
             return 0
     
     def get_disk_info(self) -> Dict[str, Any]:
-        """获取磁盘信息"""
+        """Summarise disk utilisation for the root filesystem."""
         cached = self._get_cached('disk')
         if cached:
             return cached
@@ -66,7 +65,7 @@ class SystemMonitor:
             return {"usage_percent": 0, "used_gb": 0, "total_gb": 0}
     
     def get_memory_info(self) -> Dict[str, Any]:
-        """获取内存信息"""
+        """Summarise memory utilisation."""
         cached = self._get_cached('memory')
         if cached:
             return cached
@@ -85,13 +84,13 @@ class SystemMonitor:
             return {"usage_percent": 0, "used_gb": 0, "total_gb": 0}
     
     def get_cpu_info(self) -> Dict[str, Any]:
-        """获取 CPU 信息"""
+        """Return aggregated CPU utilisation."""
         cached = self._get_cached('cpu')
         if cached:
             return cached
         
         try:
-            # 缩短采样窗口，降低接口首次调用延迟
+            # Use a short sampling window to minimise initial latency.
             cpu_percent = psutil.cpu_percent(interval=0.1)
             cpu_count = psutil.cpu_count()
             
@@ -106,12 +105,12 @@ class SystemMonitor:
             return {"usage_percent": 0, "cores": 0}
     
     def get_network_speed(self) -> Dict[str, Any]:
-        """获取网络速度 (Mbps)"""
+        """Estimate network throughput in Mbps."""
         try:
             current_time = time.time()
             current_io = psutil.net_io_counters()
             
-            # 首次调用,无法计算速率
+            # Without a previous sample we cannot calculate throughput.
             if self._last_net_io is None or self._last_net_time is None:
                 self._last_net_io = current_io
                 self._last_net_time = current_time
@@ -121,25 +120,25 @@ class SystemMonitor:
                     "download_mbps": 0.0
                 }
             
-            # 计算时间差
+            # Compute elapsed time.
             time_delta = current_time - self._last_net_time
-            if time_delta < 0.1:  # 时间间隔太短
+            if time_delta < 0.1:  # Ignore windows that are too short for accuracy.
                 return {
                     "speed_mbps": 0.0,
                     "upload_mbps": 0.0,
                     "download_mbps": 0.0
                 }
             
-            # 计算流量差 (字节)
+            # Calculate byte deltas.
             bytes_sent = current_io.bytes_sent - self._last_net_io.bytes_sent
             bytes_recv = current_io.bytes_recv - self._last_net_io.bytes_recv
             
-            # 转换为 Mbps (1 Mbps = 1,000,000 bits/s = 125,000 bytes/s)
+            # Convert bytes per second to Mbps (125,000 bytes/s).
             upload_mbps = round((bytes_sent / time_delta) / 125000, 1)
             download_mbps = round((bytes_recv / time_delta) / 125000, 1)
             speed_mbps = round(upload_mbps + download_mbps, 1)
             
-            # 更新状态
+            # Update sample state.
             self._last_net_io = current_io
             self._last_net_time = current_time
             
@@ -157,7 +156,7 @@ class SystemMonitor:
             }
     
     def get_full_status(self) -> Dict[str, Any]:
-        """获取完整的系统状态"""
+        """Aggregate all monitored subsystems into a single payload."""
         return {
             "uptime_seconds": self.get_uptime(),
             "disk": self.get_disk_info(),
@@ -167,5 +166,5 @@ class SystemMonitor:
         }
 
 
-# 全局实例
+# Singleton instance used across the application.
 system_monitor = SystemMonitor()

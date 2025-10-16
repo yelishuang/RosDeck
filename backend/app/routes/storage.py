@@ -1,5 +1,5 @@
 """
-存储管理相关路由
+Storage management and maintenance endpoints.
 """
 import csv
 import io
@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/storage", tags=["存储管理"])
 
 
-# ==================== 数据模型 ====================
+# ==================== Data models ====================
 
 class CleanupRequest(BaseModel):
     target: str = Field(..., description="清理目标")
@@ -132,10 +132,10 @@ class SmartSelfTestRequest(BaseModel):
         return value
 
 
-# ==================== 帮助函数 ====================
+# ==================== Helper utilities ====================
 
 def _build_csv(report_payload: dict) -> str:
-    """将报表数据转换为 CSV 文本"""
+    """Convert the report payload into a CSV document."""
     summary = report_payload.get("summary", {})
     partitions = report_payload.get("partitions", [])
     history = summary.get("history", [])
@@ -191,12 +191,12 @@ def _build_csv(report_payload: dict) -> str:
     return buffer.getvalue()
 
 
-# ==================== 路由实现 ====================
+# ==================== Route implementations ====================
 
 @router.get("/summary")
 async def get_storage_summary():
     """
-    返回磁盘使用总览与历史数据
+    Return aggregate disk usage data, including historical samples.
     """
     try:
         summary = storage_monitor.get_summary()
@@ -209,7 +209,7 @@ async def get_storage_summary():
 @router.get("/partitions")
 async def get_storage_partitions():
     """
-    返回分区详细信息
+    Provide detailed partition statistics.
     """
     try:
         return {"partitions": storage_monitor.get_partitions()}
@@ -223,7 +223,7 @@ async def export_storage_report(
     format: str = Query(default="json", regex="^(json|csv)$")
 ):
     """
-    导出磁盘报告
+    Export the storage report in JSON or CSV format.
     """
     try:
         payload = storage_monitor.build_report_payload()
@@ -253,7 +253,7 @@ async def cleanup_storage(
     username: str = Depends(get_current_username),
 ):
     """
-    管理员执行清理任务
+    Perform an administrative cleanup operation.
     """
     try:
         result = storage_operations.cleanup(
@@ -282,7 +282,7 @@ async def mount_action(
     username: str = Depends(get_current_username),
 ):
     """
-    管理员挂载/卸载设备
+    Mount or unmount a device on behalf of an administrator.
     """
     try:
         return storage_operations.mount_action(
@@ -311,7 +311,7 @@ async def partition_action(
     username: str = Depends(get_current_username),
 ):
     """
-    管理员执行分区/格式化操作
+    Execute partitioning or formatting tasks with elevated privileges.
     """
     try:
         return storage_operations.partition_action(
@@ -341,7 +341,7 @@ async def smart_selftest(
     username: str = Depends(get_current_username),
 ):
     """
-    管理员执行 SMART 自检
+    Trigger a SMART self-test on a storage device.
     """
     try:
         return storage_operations.smart_selftest(
@@ -368,7 +368,7 @@ async def smart_report(
     username: str = Depends(get_current_username),
 ):
     """
-    管理员获取 SMART 报告
+    Retrieve a SMART report for a storage device.
     """
     try:
         return storage_operations.smart_report(device=device, actor=username)
@@ -388,6 +388,6 @@ async def smart_report(
 )
 async def list_operations():
     """
-    获取近期管理员操作日志
+    List recent administrative storage operations.
     """
     return {"operations": storage_operations.list_logs(limit=50)}

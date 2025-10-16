@@ -1,5 +1,5 @@
 """
-ROS 参数管理服务
+ROS parameter management service built on a background rclpy node.
 """
 from __future__ import annotations
 
@@ -19,7 +19,7 @@ try:
     from rclpy.parameter import Parameter
     from rcl_interfaces.msg import ParameterDescriptor, ParameterEvent, ParameterType, ParameterValue, Parameter as ParameterMsg
     from rcl_interfaces.srv import DescribeParameters, GetParameters, ListParameters
-except ImportError:  # pragma: no cover - 缺少 ROS 环境时触发
+except ImportError:  # pragma: no cover - triggered when ROS dependencies are missing.
     rclpy = None  # type: ignore
     SingleThreadedExecutor = None  # type: ignore
     Node = None  # type: ignore
@@ -40,7 +40,7 @@ def _now() -> float:
 
 
 def _param_value_to_python(value: Optional[ParameterValue]) -> Any:
-    """将 ParameterValue 转换为 Python 类型"""
+    """Convert a ParameterValue into its native Python representation."""
     if value is None:
         return None
     if value.type == ParameterType.PARAMETER_BOOL:
@@ -89,7 +89,7 @@ def _parameter_to_dict(name: str, value: ParameterValue, descriptor: Optional[Pa
 
 
 def _build_tree(parameters: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
-    """将参数字典构建为树形结构"""
+    """Construct a hierarchical tree representation from the flattened parameter map."""
     root: Dict[str, Any] = {"name": "/", "children": {}, "is_leaf": False}
     for name, info in parameters.items():
         parts = name.split(".")
@@ -114,7 +114,7 @@ class ParameterEventRecord:
 
 
 class _StubParameterManager:
-    """缺少 ROS 环境时的降级实现"""
+    """Fallback implementation used when ROS dependencies are unavailable."""
 
     def is_available(self) -> bool:
         return False
@@ -140,8 +140,7 @@ class _StubParameterManager:
 
 class ROSParameterManager:
     """
-    ROS2 参数管理
-    维护后台 rclpy 节点用于参数查询、事件监听
+    Manages ROS 2 parameters by running a background rclpy node for queries and event subscriptions.
     """
 
     MAX_EVENT_HISTORY = 512
@@ -226,7 +225,7 @@ class ROSParameterManager:
             return [copy.deepcopy(ev) for ev in self._event_history if ev.timestamp > since_ts]
 
     def export_snapshot(self) -> Dict[str, Any]:
-        """导出全部节点参数快照"""
+        """Export a snapshot of every node's parameters."""
         data = {
             "generated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
             "ros_distro": self._distro,
@@ -257,7 +256,7 @@ class ROSParameterManager:
             self._node = node
             self._executor = executor
 
-            # 订阅参数事件
+            # Subscribe to parameter events for real-time updates.
             node.create_subscription(
                 ParameterEvent,
                 "/parameter_events",
@@ -265,7 +264,7 @@ class ROSParameterManager:
                 10
             )
 
-            # 首次加载
+            # Perform the initial cache warm-up.
             self._refresh_all_nodes()
             self._primed_event.set()
 
@@ -360,7 +359,7 @@ class ROSParameterManager:
             list_resp = future.result()
             parameter_names = list(list_resp.names)
 
-            # 获取参数值
+            # Retrieve parameter values from the node.
             get_req = GetParameters.Request()
             get_req.names = parameter_names
             future = get_client.call_async(get_req)
@@ -369,7 +368,7 @@ class ROSParameterManager:
                 raise TimeoutError(f"获取节点 {node_full_name} 参数值超时")
             get_resp = future.result()
 
-            # 描述符可选
+            # Parameter descriptors are optional and may not be provided.
             descriptors: List[ParameterDescriptor] = []
             if describe_client.wait_for_service(timeout_sec=1.0):
                 describe_req = DescribeParameters.Request()
@@ -428,7 +427,7 @@ class ROSParameterManager:
             if len(self._event_history) > self.MAX_EVENT_HISTORY:
                 self._event_history = self._event_history[-self.MAX_EVENT_HISTORY:]
 
-            # 更新缓存
+            # Update the in-memory caches based on emitted events.
             cache = self._parameter_cache.setdefault(node, {})
             descriptor_cache = self._descriptor_cache.setdefault(node, {})
             for item in added + changed:
@@ -438,11 +437,11 @@ class ROSParameterManager:
 
 
 def parameter_to_python(parameter_msg) -> Dict[str, Any]:
-    """Parameter 描述转换"""
+    """Convert a Parameter message into the uniform dictionary representation."""
     descriptor = getattr(parameter_msg, "descriptor", None)
     value = getattr(parameter_msg, "value", None)
     return _parameter_to_dict(parameter_msg.name, value, descriptor)
 
 
-# 全局实例
+# Shared singleton instance.
 ros_parameter_manager = ROSParameterManager()

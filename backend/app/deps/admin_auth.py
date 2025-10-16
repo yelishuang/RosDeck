@@ -1,5 +1,5 @@
 """
-管理员权限验证
+Admin privilege validation utilities.
 """
 from fastapi import Request, HTTPException
 import time
@@ -10,32 +10,24 @@ logger = logging.getLogger(__name__)
 
 
 class AdminAuthManager:
-    """管理员认证管理器"""
+    """Manage elevated administrator sessions for privileged routes."""
     
     def __init__(self, session_timeout: int = 1800):
-        """
-        Args:
-            session_timeout: Session 超时时间(秒),默认 30 分钟
-        """
+        """Initialise the manager with a session timeout in seconds (default 30 minutes)."""
         self.session_timeout = session_timeout
-        self.admin_sessions: Dict[str, float] = {}  # {session_id: expire_time}
+        self.admin_sessions: Dict[str, float] = {}  # session_id -> expiry timestamp
     
     def create_session(self, username: str) -> str:
-        """
-        创建管理员 session
-        
-        Returns:
-            session_id
-        """
+        """Create a new admin session and return its identifier."""
         session_id = f"admin_{username}_{int(time.time())}"
         expire_time = time.time() + self.session_timeout
         self.admin_sessions[session_id] = expire_time
         
-        logger.info(f"创建管理员 session: {session_id}, 有效期: {self.session_timeout}秒")
+        logger.info(f"Created admin session {session_id} with TTL {self.session_timeout} seconds")
         return session_id
     
     def validate_session(self, session_id: str) -> bool:
-        """验证 session 是否有效"""
+        """Return True when the session exists and has not expired."""
         if session_id not in self.admin_sessions:
             return False
         
@@ -43,15 +35,15 @@ class AdminAuthManager:
         current_time = time.time()
         
         if current_time > expire_time:
-            # Session 过期,清理
+            # Evict expired sessions immediately.
             del self.admin_sessions[session_id]
-            logger.warning(f"管理员 session 已过期: {session_id}")
+            logger.warning(f"Admin session expired: {session_id}")
             return False
         
         return True
     
     def get_remaining_time(self, session_id: str) -> int:
-        """获取 session 剩余有效时间(秒)"""
+        """Return the remaining lifetime of a session in seconds."""
         if session_id not in self.admin_sessions:
             return 0
         
@@ -60,13 +52,13 @@ class AdminAuthManager:
         return max(remaining, 0)
     
     def revoke_session(self, session_id: str):
-        """撤销 session"""
+        """Revoke an admin session explicitly."""
         if session_id in self.admin_sessions:
             del self.admin_sessions[session_id]
-            logger.info(f"撤销管理员 session: {session_id}")
+            logger.info(f"Revoked admin session: {session_id}")
     
     def cleanup_expired_sessions(self):
-        """清理所有过期的 session"""
+        """Remove any expired sessions from the in-memory store."""
         current_time = time.time()
         expired_sessions = [
             sid for sid, expire_time in self.admin_sessions.items()
@@ -77,16 +69,11 @@ class AdminAuthManager:
             del self.admin_sessions[sid]
         
         if expired_sessions:
-            logger.info(f"清理了 {len(expired_sessions)} 个过期的管理员 session")
+            logger.info(f"Cleaned {len(expired_sessions)} expired admin sessions")
     
     async def require_admin(self, request: Request):
-        """
-        依赖注入: 要求管理员权限
-        
-        使用方式:
-            @router.post("/power", dependencies=[Depends(admin_auth.require_admin)])
-        """
-        # 从 Cookie 获取 admin_session_id
+        """FastAPI dependency that enforces admin authentication."""
+        # Read the admin session identifier from cookies.
         admin_session_id = request.cookies.get("admin_session_id")
         
         if not admin_session_id:
@@ -95,33 +82,33 @@ class AdminAuthManager:
                 detail={"message": "需要管理员权限", "code": "ADMIN_REQUIRED"}
             )
         
-        # 验证 session
+        # Validate the associated session before proceeding.
         if not self.validate_session(admin_session_id):
             raise HTTPException(
                 status_code=403,
                 detail={"message": "管理员 session 已过期,请重新验证", "code": "ADMIN_SESSION_EXPIRED"}
             )
         
-        # 清理过期 session (顺便做)
+        # Opportunistically clean up any expired entries.
         self.cleanup_expired_sessions()
 
 
-# 全局实例
-admin_auth = AdminAuthManager(session_timeout=1800)  # 30 分钟
+# Shared singleton instance (30-minute session TTL).
+admin_auth = AdminAuthManager(session_timeout=1800)
 
 
 def extract_username_from_session(session_id: str) -> str:
     """
-    从 session_id 中提取用户名.
+    Extract the username component from a session identifier.
 
-    session_id 约定格式: session_{username}_{timestamp}
-    通过从最后一个下划线拆分, 以支持用户名中包含下划线的情况.
+    Expected format: ``session_{username}_{timestamp}``. The last underscore acts as the
+    delimiter so usernames may themselves contain underscores.
     """
     prefix = "session_"
     if not session_id.startswith(prefix):
         raise ValueError("session_id 格式无效: 缺少前缀")
 
-    # 移除前缀后, 将最后一个下划线视为时间戳分隔符
+    # After stripping the prefix, treat the last underscore as the timestamp separator.
     username_part = session_id[len(prefix):]
     username, separator, ts = username_part.rpartition("_")
 
@@ -138,11 +125,7 @@ def extract_username_from_session(session_id: str) -> str:
 
 
 async def get_current_username(request: Request) -> str:
-    """
-    FastAPI 依赖: 获取当前登录用户名.
-
-    如果 Cookie 中缺少 session_id 或格式非法, 返回 401.
-    """
+    """FastAPI dependency that returns the username associated with the session cookie."""
     session_id = request.cookies.get("session_id")
     if not session_id:
         raise HTTPException(

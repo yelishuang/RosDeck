@@ -1,6 +1,5 @@
 """
-Turtlesim 窗口捕获服务
-负责定位 turtlesim 窗口并提供 MJPEG 视频流。
+Turtlesim capture service that locates the simulator window and streams MJPEG frames.
 """
 from __future__ import annotations
 
@@ -15,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 class TurtlesimCaptureError(RuntimeError):
-    """窗口捕获相关异常。"""
+    """Raised when turtlesim window capture fails."""
 
     def __init__(self, message: str, code: str = "CAPTURE_ERROR"):
         super().__init__(message)
@@ -31,9 +30,7 @@ class _WindowCandidate:
 
 
 class TurtlesimCapture:
-    """
-    封装窗口查找与 MJPEG 视频流生成。
-    """
+    """Encapsulates window discovery and MJPEG stream generation logic."""
 
     def __init__(self, keyword: str = "TurtleSim") -> None:
         self.keyword = keyword
@@ -41,13 +38,11 @@ class TurtlesimCapture:
         self._cached_window_id: Optional[str] = None
 
     def reset_cache(self) -> None:
-        """清理缓存的窗口 ID。"""
+        """Clear any cached window identifier."""
         self._cached_window_id = None
 
     async def ensure_window_id(self, retries: int = 5, delay: float = 0.6) -> str:
-        """
-        获取窗口 ID，必要时重试。
-        """
+        """Locate the turtlesim window ID, optionally retrying with backoff."""
         async with self._cache_lock:
             logger.debug(
                 "ensure_window_id invoked (cached=%s)", self._cached_window_id or "None"
@@ -109,7 +104,7 @@ class TurtlesimCapture:
             logger.warning("未在 xwininfo 输出中找到包含 '%s' 的窗口", self.keyword)
             return None
 
-        # 选择面积最大的候选，通常为内容窗口
+        # Prefer the candidate with the largest area, which usually represents the main content window.
         best = max(candidates, key=lambda item: item.area)
         logger.debug(
             "匹配到窗口: title=%s, window=%s, parent=%s, area=%s",
@@ -186,7 +181,7 @@ class TurtlesimCapture:
             logger.debug("窗口 %s 不存在，将重新定位", window_id)
             return False
         except FileNotFoundError:
-            # 如果 xwininfo 本身不存在，上一阶段也会失败，这里保持 False
+            # If xwininfo is not available the earlier discovery already failed, treat as missing.
             logger.debug("检测窗口时未找到 xwininfo 命令")
             return False
 
@@ -197,9 +192,7 @@ class TurtlesimCapture:
         quality: int = 5,
         scale_width: int = 640,
     ) -> AsyncGenerator[bytes, None]:
-        """
-        生成 MJPEG 视频流。
-        """
+        """Yield an MJPEG byte stream captured from the turtlesim window."""
         cmd = [
             "ffmpeg",
             "-loglevel",
@@ -255,8 +248,8 @@ class TurtlesimCapture:
                 buffer += chunk
 
                 while True:
-                    start = buffer.find(b"\xff\xd8")  # JPEG 开头
-                    end = buffer.find(b"\xff\xd9")  # JPEG 结尾
+                    start = buffer.find(b"\xff\xd8")  # JPEG SOI marker.
+                    end = buffer.find(b"\xff\xd9")  # JPEG EOI marker.
                     if start != -1 and end != -1 and end > start:
                         frame = buffer[start : end + 2]
                         buffer = buffer[end + 2 :]
@@ -269,11 +262,11 @@ class TurtlesimCapture:
                         )
                         yield header + frame + b"\r\n"
                     else:
-                        # 保持 buffer 不无限增长
+                        # Trim the buffer periodically to avoid unbounded growth.
                         if start == -1 and len(buffer) > 1_000_000:
                             buffer = buffer[-100_000:]
                         break
-        except asyncio.CancelledError:  # pragma: no cover - 用户取消时执行
+        except asyncio.CancelledError:  # pragma: no cover - triggered when clients cancel streams.
             logger.debug("视频流任务被取消 (window_id=%s)", window_id)
             await _kill_process()
             raise
@@ -285,5 +278,5 @@ class TurtlesimCapture:
             await _kill_process()
 
 
-# 单例实例供路由使用
+# Shared singleton instance leveraged by API routes.
 turtlesim_capture = TurtlesimCapture()

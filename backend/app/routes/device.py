@@ -1,5 +1,5 @@
 """
-设备信息相关路由
+Device metadata endpoints.
 """
 from fastapi import APIRouter, HTTPException
 import socket
@@ -12,12 +12,12 @@ router = APIRouter(prefix="/api/device", tags=["设备信息"])
 
 def get_local_ip() -> str:
     """
-    获取局域网 IP 地址(非 127.0.0.1)
+    Derive the LAN-facing IP address (excluding 127.0.0.1).
     """
     try:
-        # 创建一个 UDP socket
+        # Create a UDP socket for interface discovery.
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        # 连接到外部地址(不实际发送数据)
+        # Connect to an external endpoint without sending packets.
         s.connect(("8.8.8.8", 80))
         local_ip = s.getsockname()[0]
         s.close()
@@ -30,32 +30,25 @@ def get_local_ip() -> str:
 @router.get("/info")
 async def get_device_info():
     """
-    获取设备基本信息
-    
-    返回:
-        - hostname: 主机名
-        - status: 在线状态
-        - os: 操作系统
-        - architecture: 架构
-        - ip_address: IP 地址
+    Return hostname, OS metadata, architecture, and LAN IP address.
     """
     try:
         hostname = socket.gethostname()
         os_info = f"{platform.system()} {platform.release()}"
         
-        # 尝试识别 openEuler
+        # Attempt to detect openEuler builds from release metadata.
         try:
             with open("/etc/os-release", "r") as f:
                 content = f.read()
                 if "openEuler" in content:
-                    # 提取版本号
+                    # Infer the distribution version.
                     for line in content.split('\n'):
                         if line.startswith("VERSION="):
                             version = line.split('=')[1].strip('"')
                             os_info = f"openEuler {version}"
                             break
         except:
-            pass  # 如果读取失败,使用默认值
+            pass  # Fall back to the default OS string when parsing fails.
         
         architecture = platform.machine()
         ip_address = get_local_ip()

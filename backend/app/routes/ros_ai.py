@@ -1,6 +1,5 @@
 """
-ROS-AI 指挥官路由
-处理 turtlesim 的启动、控制和 AI 指令
+ROS-AI command center endpoints orchestrating turtlesim control and AI directives.
 """
 import asyncio
 import logging
@@ -76,21 +75,21 @@ def _summarize_motion_plan(commands: List[Dict[str, Any]]) -> str:
 
 
 class AICommandRequest(BaseModel):
-    """AI 指令请求"""
+    """Payload carrying the AI instruction and optional chat history."""
     message: str
     history: Optional[List[Dict[str, str]]] = None
 
 
 class VelocityCommandRequest(BaseModel):
-    """速度控制请求"""
+    """Velocity command structure for turtlesim."""
     linear: float
     angular: float
-    duration: Optional[float] = None  # 持续时间（秒）
+    duration: Optional[float] = None  # Optional run duration in seconds.
 
 
 @router.post("/ai/command")
 async def process_ai_command(request: AICommandRequest):
-    """接收前端指令，调用 AI 中转站生成动作计划并驱动 turtlesim。"""
+    """Generate a motion plan via the AI proxy and execute it within turtlesim."""
     try:
         plan = await ros_ai_planner.generate_motion_plan(
             request.message,
@@ -151,13 +150,13 @@ async def process_ai_command(request: AICommandRequest):
 
 @router.get("/ai/status")
 async def get_ai_status():
-    """获取 AI 服务状态"""
+    """Expose current AI proxy status and configuration signals."""
     return ros_ai_planner.get_status()
 
 
 @router.post("/turtlesim/start")
 async def start_turtlesim():
-    """启动 turtlesim"""
+    """Start the turtlesim simulator if it is not already running."""
     try:
         logger.info("收到前端启动 turtlesim 请求")
         result = turtlesim_manager.start_turtlesim()
@@ -177,7 +176,7 @@ async def start_turtlesim():
 
 @router.post("/turtlesim/stop")
 async def stop_turtlesim():
-    """停止 turtlesim"""
+    """Stop a running turtlesim instance."""
     try:
         result = turtlesim_manager.stop_turtlesim()
         if result['success']:
@@ -194,7 +193,7 @@ async def stop_turtlesim():
 
 @router.get("/turtlesim/status")
 async def get_turtlesim_status():
-    """获取 turtlesim 状态"""
+    """Return the latest turtlesim runtime status."""
     try:
         status = turtlesim_manager.get_status()
         return {
@@ -211,7 +210,7 @@ async def get_turtlesim_status():
 
 @router.get("/turtlesim/stream")
 async def stream_turtlesim():
-    """以 MJPEG 形式输出 turtlesim 窗口视频流"""
+    """Stream the turtlesim window as an MJPEG feed."""
     if not turtlesim_manager.is_running:
         raise HTTPException(
             status_code=409,
@@ -243,7 +242,7 @@ async def stream_turtlesim():
 
 @router.post("/turtlesim/velocity")
 async def send_velocity(request: VelocityCommandRequest):
-    """发送速度控制命令"""
+    """Apply a velocity command to turtlesim, optionally reverting after a duration."""
     try:
         success = turtlesim_manager.send_velocity_command(
             request.linear,
@@ -251,7 +250,7 @@ async def send_velocity(request: VelocityCommandRequest):
         )
 
         if success:
-            # 如果指定了持续时间，启动定时停止任务
+            # Schedule an auto-stop when a duration is provided.
             if request.duration:
                 async def stop_after_duration():
                     await asyncio.sleep(request.duration)
@@ -281,10 +280,10 @@ async def send_velocity(request: VelocityCommandRequest):
         )
 
 
-# WebSocket 端点
+# WebSocket endpoint bridging turtlesim command streaming.
 @router.websocket("/ws/turtle")
 async def turtle_websocket(websocket: WebSocket):
     """
-    Turtlesim WebSocket 连接
+    Upgrade the connection and delegate handling to the turtlesim WebSocket endpoint.
     """
     await turtlesim_websocket_endpoint(websocket)

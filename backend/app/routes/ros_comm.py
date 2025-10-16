@@ -1,5 +1,5 @@
 """
-ROS 通信监控路由
+ROS communication monitoring endpoints.
 """
 from __future__ import annotations
 
@@ -63,14 +63,14 @@ def _handle_runtime_error(exc: RuntimeError) -> HTTPException:
 @router.get("/topics")
 async def list_topics():
     """
-    获取话题列表及基础统计
+    List ROS topics along with basic transport statistics.
     """
     try:
         topics = ros_comm_monitor.list_topics()
         return {"success": True, "topics": topics}
     except RuntimeError as exc:
         raise _handle_runtime_error(exc) from exc
-    except Exception as exc:  # pragma: no cover - 防御性兜底
+    except Exception as exc:  # pragma: no cover - defensive fallback.
         logger.exception("获取话题列表失败: %s", exc)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -81,7 +81,7 @@ async def list_topics():
 @router.get("/topics/{topic_name:path}/messages")
 async def get_topic_messages(topic_name: str, limit: int = 10):
     """
-    获取话题的最新消息
+    Return the most recent messages published on a topic.
     """
     limit = max(1, min(limit, ros_comm_monitor.MESSAGE_CACHE_LIMIT))
     try:
@@ -94,7 +94,7 @@ async def get_topic_messages(topic_name: str, limit: int = 10):
             status_code=status.HTTP_404_NOT_FOUND,
             detail={"message": str(exc)},
         ) from exc
-    except Exception as exc:  # pragma: no cover
+    except Exception as exc:  # pragma: no cover - defensive fallback.
         logger.exception("获取话题 %s 消息失败: %s", topic_name, exc)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -105,7 +105,7 @@ async def get_topic_messages(topic_name: str, limit: int = 10):
 @router.post("/topics/{topic_name:path}/analysis")
 async def analyse_topic(topic_name: str, timerange: str = "5m"):
     """
-    对话题消息进行统计分析
+    Produce message statistics for a topic over a requested time window.
     """
     try:
         window_seconds = _parse_timerange(timerange)
@@ -125,7 +125,7 @@ async def analyse_topic(topic_name: str, timerange: str = "5m"):
             status_code=status.HTTP_404_NOT_FOUND,
             detail={"message": str(exc)},
         ) from exc
-    except Exception as exc:  # pragma: no cover
+    except Exception as exc:  # pragma: no cover - defensive fallback.
         logger.exception("分析话题 %s 失败: %s", topic_name, exc)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -136,7 +136,7 @@ async def analyse_topic(topic_name: str, timerange: str = "5m"):
 @router.get("/services")
 async def list_services():
     """
-    获取 ROS 服务列表
+    Enumerate available ROS services along with metadata.
     """
     if not ros_comm_monitor.is_available():
         return {
@@ -150,7 +150,7 @@ async def list_services():
         return {"success": True, "services": services}
     except RuntimeError as exc:
         raise _handle_runtime_error(exc) from exc
-    except Exception as exc:  # pragma: no cover
+    except Exception as exc:  # pragma: no cover - defensive fallback.
         logger.exception("获取服务列表失败: %s", exc)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -164,7 +164,7 @@ async def call_service(
     payload: ServiceCallRequest = Body(default_factory=ServiceCallRequest),
 ):
     """
-    调用指定 ROS 服务
+    Invoke a ROS service and return the response payload details.
     """
     start = time.perf_counter()
     try:
@@ -192,7 +192,7 @@ async def call_service(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail={"message": str(exc)},
         ) from exc
-    except Exception as exc:  # pragma: no cover
+    except Exception as exc:  # pragma: no cover - defensive fallback.
         logger.exception("调用服务 %s 失败: %s", service_name, exc)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

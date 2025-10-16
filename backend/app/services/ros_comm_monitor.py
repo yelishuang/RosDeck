@@ -1,5 +1,5 @@
 """
-ROS 通信监控服务
+ROS communication monitoring service tracking topics and services in real time.
 """
 from __future__ import annotations
 
@@ -20,7 +20,7 @@ try:
     from rosidl_runtime_py import set_message_fields  # type: ignore
     from rosidl_runtime_py.convert import message_to_ordereddict  # type: ignore
     from rosidl_runtime_py.utilities import get_message, get_service  # type: ignore
-except ImportError:  # pragma: no cover - 在无 ROS 环境下触发
+except ImportError:  # pragma: no cover - triggered when ROS is unavailable.
     rclpy = None  # type: ignore
     MultiThreadedExecutor = None  # type: ignore
     Node = None  # type: ignore
@@ -45,7 +45,7 @@ logger = logging.getLogger(__name__)
 
 
 def _ros_time_to_iso(timestamp: Any) -> str:
-    """将 ROS 时间戳转换为 ISO 字符串"""
+    """Convert a ROS timestamp into an ISO 8601 string."""
     try:
         sec = getattr(timestamp, "sec", None) or getattr(timestamp, "seconds", 0)
         nanosec = getattr(timestamp, "nanosec", None) or getattr(timestamp, "nanoseconds", 0)
@@ -67,7 +67,7 @@ def _safe_message_to_dict(msg: Any) -> Any:
     try:
         return message_to_ordereddict(msg)
     except Exception as exc:  # pragma: no cover
-        logger.debug("消息转换失败: %s", exc)
+        logger.debug("Failed to convert ROS message to dict: %s", exc)
         return str(msg)
 
 
@@ -77,7 +77,7 @@ def _safe_serialize(msg: Any) -> int:
     try:
         return len(serialize_message(msg))
     except Exception as exc:  # pragma: no cover
-        logger.debug("序列化失败: %s", exc)
+        logger.debug("Failed to serialize ROS message: %s", exc)
         return 0
 
 
@@ -90,7 +90,7 @@ class TopicSample:
 
 
 class TopicSession:
-    """话题监控会话"""
+    """Stateful tracker that buffers messages and metrics for a single topic."""
 
     def __init__(self, topic_name: str, msg_type_str: str, msg_type: Any, message_limit: int):
         self.topic_name = topic_name
@@ -184,7 +184,7 @@ class TopicSession:
 
 
 class ROSCommMonitor:
-    """ROS 通信监控服务"""
+    """Monitors ROS communication surfaces and exposes analytics APIs."""
 
     MESSAGE_CACHE_LIMIT = 50
     ANALYSIS_WINDOW_SECONDS = 1800
@@ -232,7 +232,7 @@ class ROSCommMonitor:
             self._available = False
 
     # ------------------------------------------------------------------ #
-    # 公共 API
+    # Public API
     # ------------------------------------------------------------------ #
 
     def is_available(self) -> bool:
@@ -440,18 +440,18 @@ class ROSCommMonitor:
         }
 
     # ------------------------------------------------------------------ #
-    # 内部工具
+    # Internal utilities
     # ------------------------------------------------------------------ #
 
-    def _spin_loop(self) -> None:  # pragma: no cover - 后台线程
+    def _spin_loop(self) -> None:  # pragma: no cover - background thread
         assert self._executor is not None
         while not self._stop_event.is_set():
             try:
                 self._executor.spin_once(timeout_sec=0.1)
             except Exception as exc:
-                logger.debug("通信监控 spin_once 异常: %s", exc)
+                logger.debug("spin_once error in communication monitor: %s", exc)
 
-    def _cleanup_loop(self) -> None:  # pragma: no cover - 后台线程
+    def _cleanup_loop(self) -> None:  # pragma: no cover - background thread
         while not self._stop_event.is_set():
             time.sleep(self.CLEANUP_INTERVAL_SECONDS)
             self._cleanup_idle_sessions()
@@ -467,9 +467,9 @@ class ROSCommMonitor:
                 session = self._sessions.pop(topic_name, None)
                 if session and session.subscription is not None:
                     try:
-                        self._node.destroy_subscription(session.subscription)
-                    except Exception as exc:  # pragma: no cover
-                        logger.debug("销毁订阅 %s 失败: %s", topic_name, exc)
+                    self._node.destroy_subscription(session.subscription)
+                except Exception as exc:  # pragma: no cover
+                    logger.debug("Failed to destroy subscription for %s: %s", topic_name, exc)
 
     def _ensure_session(self, topic_name: str) -> TopicSession:
         self._ensure_available()
@@ -555,7 +555,7 @@ class ROSCommMonitor:
         if not self._available:
             raise RuntimeError("ROS 通信监控不可用：未检测到 rclpy")
 
-    def shutdown(self) -> None:  # pragma: no cover - 测试或退出时调用
+    def shutdown(self) -> None:  # pragma: no cover - invoked during tests or shutdown.
         self._stop_event.set()
         if self._cleanup_thread and self._cleanup_thread.is_alive():
             self._cleanup_thread.join(timeout=1.0)
@@ -571,5 +571,5 @@ class ROSCommMonitor:
                 pass
 
 
-# 全局实例
+# Shared singleton instance.
 ros_comm_monitor = ROSCommMonitor()

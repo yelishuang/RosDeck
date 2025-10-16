@@ -1,6 +1,5 @@
 """
-Turtlesim 管理服务
-负责启动、监控和控制 turtlesim。
+Turtlesim management service responsible for launching, monitoring, and controlling turtlesim.
 """
 from __future__ import annotations
 
@@ -19,21 +18,21 @@ try:
     from geometry_msgs.msg import Twist
     from rclpy.node import Node
     from turtlesim.msg import Pose
-except ImportError:  # pragma: no cover - 运行环境未安装 ROS 依赖时触发
+except ImportError:  # pragma: no cover - triggered when ROS dependencies are unavailable.
     rclpy = None  # type: ignore[assignment]
     Node = None  # type: ignore[assignment]
     Twist = None  # type: ignore[assignment]
     Pose = None  # type: ignore[assignment]
 
 try:
-    # 避免循环依赖，失败时延迟导入
+    # Avoid circular import issues by attempting a late import.
     from app.services.turtlesim_capture import turtlesim_capture
-except Exception:  # pragma: no cover - 单元测试或导入失败时延迟处理
+except Exception:  # pragma: no cover - tolerate missing capture support during tests.
     turtlesim_capture = None  # type: ignore[assignment]
 
 
 class TurtlesimNode:
-    """封装 ROS turtlesim 控制节点的启动与停止。"""
+    """Encapsulates startup and lifetime management of the turtlesim control node."""
 
     def __init__(self) -> None:
         self.node: Optional[Node] = None
@@ -134,7 +133,7 @@ class TurtlesimNode:
 
 
 class TurtlesimManager:
-    """Turtlesim 启停与 ROS 控制一站式服务。"""
+    """High-level turtlesim lifecycle and control orchestration service."""
 
     def __init__(self) -> None:
         self.process: Optional[subprocess.Popen[bytes]] = None
@@ -145,7 +144,7 @@ class TurtlesimManager:
         self._motion_lock = threading.Lock()
         self._motion_rate_hz = 30.0
 
-    # ------------------------ 启停流程 ------------------------ #
+    # ------------------------ Launch lifecycle ------------------------ #
     def start_turtlesim(self) -> Dict[str, Any]:
         if self.is_running:
             return {"success": True, "message": "Turtlesim 已在运行", "already_running": True}
@@ -214,12 +213,12 @@ class TurtlesimManager:
         if turtlesim_capture is not None:
             turtlesim_capture.reset_cache()
 
-    # ------------------------ 辅助工具 ------------------------ #
+    # ------------------------ Helper utilities ------------------------ #
     def _wait_for_process(self, timeout: float) -> bool:
         start = time.time()
         while time.time() - start < timeout:
             if self.process and self.process.poll() is None:
-                time.sleep(0.4)  # 再等待片刻确保稳定
+                time.sleep(0.4)  # Allow a short grace period for process stabilisation.
                 return True
             time.sleep(0.2)
         return False
@@ -234,7 +233,7 @@ class TurtlesimManager:
         logger.warning("等待 /turtle1/pose 数据超时")
         return False
 
-    # ------------------------ 对外 API ------------------------ #
+    # ------------------------ Public API ------------------------ #
     def get_status(self) -> Dict[str, Any]:
         return {
             "is_running": self.is_running,
@@ -245,7 +244,7 @@ class TurtlesimManager:
     def send_velocity_command(self, linear: float, angular: float) -> bool:
         return self.ros_node.send_velocity(linear, angular)
 
-    # ------------------------ 动作计划执行 ------------------------ #
+    # ------------------------ Motion plan execution ------------------------ #
     def stop_motion(self, wait: bool = False) -> None:
         with self._motion_lock:
             if self._motion_thread and self._motion_thread.is_alive():
@@ -256,7 +255,7 @@ class TurtlesimManager:
             self._motion_thread = None
             if wait or self._motion_stop_event.is_set():
                 self._motion_stop_event = threading.Event()
-        # 确保停止后发送零速度
+        # Ensure the turtle decelerates to zero velocity after stopping.
         if self.is_running:
             self.ros_node.send_velocity(0.0, 0.0)
 
@@ -404,9 +403,9 @@ class TurtlesimManager:
             self.ros_node.send_velocity(linear, angular)
             time.sleep(period)
 
-        # 最终发送一次零速度确保停下
+        # Send one final zero command to guarantee a full stop.
         self.ros_node.send_velocity(0.0, 0.0)
         time.sleep(0.05)
 
-# 全局实例供路由与 WebSocket 复用
+# Shared singleton instance reused by API routes and WebSocket handlers.
 turtlesim_manager = TurtlesimManager()

@@ -1,5 +1,5 @@
 """
-ROS 相关路由
+ROS monitoring and bookmark management endpoints.
 """
 from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect, Depends
 import asyncio
@@ -15,24 +15,16 @@ router = APIRouter(prefix="/api/ros", tags=["ROS"])
 
 
 class BookmarkRequest(BaseModel):
-    """标记请求"""
-    entity_type: str  # "nodes" | "topics" | "services"
+    """Request payload for bookmark mutations."""
+    entity_type: str  # Expected values: "nodes", "topics", or "services".
     entity_name: str
-    action: str  # "add" | "remove"
+    action: str  # Supported actions: "add" or "remove".
 
 
 @router.get("/stats")
 async def get_ros_stats():
     """
-    获取 ROS 统计数据
-
-    返回:
-        - active_nodes: 活跃节点数
-        - topics_count: 话题数量
-        - services_count: 服务数量
-        - stability_percent: 系统稳定性
-        - ros_version: ROS 版本
-        - last_updated: 最后更新时间
+    Provide aggregate ROS metrics such as node, topic, and service counts with stability indicators.
     """
     try:
         stats = ros_monitor.get_stats()
@@ -48,10 +40,9 @@ async def get_ros_stats():
 @router.websocket("/ws")
 async def ros_graph_websocket(websocket: WebSocket):
     """
-    ROS图谱监控 WebSocket 连接
-    实时推送ROS图谱变化（节点、话题、服务）
+    Real-time ROS graph monitor WebSocket streaming node, topic, and service updates.
     """
-    # 验证session（可选，根据需求决定是否需要认证）
+    # Require a valid session cookie before upgrading the connection.
     cookie_session_id = websocket.cookies.get("session_id")
     if not cookie_session_id:
         logger.warning("WebSocket handshake rejected: missing session_id cookie")
@@ -68,19 +59,19 @@ async def ros_graph_websocket(websocket: WebSocket):
     await websocket.accept()
     logger.info(f"ROS图谱 WebSocket 连接已建立: 用户 {username}")
 
-    # 设置事件循环（首次连接时）
+    # Lazily bind the monitor to the active event loop.
     if ros_graph_monitor._event_loop is None:
         ros_graph_monitor.set_event_loop(asyncio.get_event_loop())
 
-    # 注册客户端
+    # Track the connected WebSocket client.
     ros_graph_monitor.register_websocket(websocket)
 
     try:
-        # 发送初始全量数据
+        # Send an initial snapshot to prime the client.
         full_data = ros_graph_monitor.get_full_snapshot()
         await websocket.send_json(full_data)
 
-        # 心跳任务
+        # Background task that maintains a heartbeat.
         async def heartbeat():
             while True:
                 try:
@@ -91,7 +82,7 @@ async def ros_graph_websocket(websocket: WebSocket):
 
         heartbeat_task = asyncio.create_task(heartbeat())
 
-        # 处理客户端消息
+        # Process inbound messages until the client disconnects.
         while True:
             try:
                 message = await websocket.receive_text()
@@ -99,11 +90,11 @@ async def ros_graph_websocket(websocket: WebSocket):
                 msg_type = data.get("type")
 
                 if msg_type == "pong":
-                    # 心跳响应
+                    # Handle heartbeat acknowledgements.
                     logger.debug(f"收到心跳响应: {username}")
 
                 elif msg_type == "get_topic_details":
-                    # 获取话题详细信息
+                    # Return topic metadata on demand.
                     topic_name = data.get("topic")
                     if topic_name:
                         details = ros_graph_monitor.get_topic_details(topic_name)
@@ -120,7 +111,7 @@ async def ros_graph_websocket(websocket: WebSocket):
                             })
 
                 elif msg_type == "bookmark":
-                    # 用户标记
+                    # Update user-managed bookmarks.
                     entity_type = data.get("entity_type")
                     entity_name = data.get("entity_name")
                     action = data.get("action")
@@ -154,7 +145,7 @@ async def ros_graph_websocket(websocket: WebSocket):
                 break
 
     finally:
-        # 清理
+        # Cleanup connection state before exiting.
         heartbeat_task.cancel()
         try:
             await heartbeat_task
@@ -168,8 +159,7 @@ async def ros_graph_websocket(websocket: WebSocket):
 @router.get("/topics/{topic_name}/details")
 async def get_topic_details(topic_name: str):
     """
-    获取话题详细信息（发布者和订阅者列表）
-    用于HTTP方式获取（WebSocket方式更推荐）
+    Return publishers and subscribers for the requested topic via HTTP.
     """
     try:
         details = ros_graph_monitor.get_topic_details(topic_name)
@@ -193,7 +183,7 @@ async def get_topic_details(topic_name: str):
 @router.post("/bookmark")
 async def manage_bookmark(request: BookmarkRequest):
     """
-    管理用户标记
+    Add or remove user bookmarks for ROS entities.
     """
     try:
         if request.action == "add":
@@ -227,7 +217,7 @@ async def manage_bookmark(request: BookmarkRequest):
 @router.get("/bookmarks")
 async def get_bookmarks():
     """
-    获取所有用户标记
+    Return every stored bookmark record.
     """
     try:
         bookmarks = ros_graph_monitor.get_bookmarks()

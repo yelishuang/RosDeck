@@ -1,5 +1,5 @@
 """
-Launch 文件管理与执行
+Manage ros2 launch files, discovery, and execution lifecycles.
 """
 from __future__ import annotations
 
@@ -51,7 +51,7 @@ class LaunchProcess:
 
 
 class RosLaunchManager:
-    """管理 ros2 launch 文件与运行任务"""
+    """Handle ros2 launch discovery, execution, and log collection."""
 
     def __init__(self):
         self.launch_dirs = [path for path in DEFAULT_LAUNCH_DIRS if path.exists()]
@@ -89,7 +89,7 @@ class RosLaunchManager:
     # Launch inspection ------------------------------------------------------
     def preview_arguments(self, package: Optional[str], launch_file: str) -> Dict[str, any]:
         """
-        使用 ros2 launch --show-args 获取参数列表
+        Inspect launch arguments by invoking `ros2 launch --show-args`.
         """
         if package:
             cmd = ["ros2", "launch", package, launch_file, "--show-args"]
@@ -190,7 +190,7 @@ class RosLaunchManager:
         with self._lock:
             session = self._launches.get(launch_id)
         if not session:
-            # 允许读取历史日志
+            # Allow reading historical logs if the session no longer exists.
             stdout_log = self._log_dir() / f"{launch_id}_stdout.log"
             stderr_log = self._log_dir() / f"{launch_id}_stderr.log"
         else:
@@ -213,6 +213,5 @@ class RosLaunchManager:
         }
 
 
-# 全局实例
+# Shared singleton instance.
 ros_launch_manager = RosLaunchManager()
-

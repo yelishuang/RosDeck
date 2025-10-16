@@ -1,6 +1,5 @@
 """
-存储管理操作服务
-提供目录清理、挂载/卸载、分区格式化以及 SMART 功能封装
+Storage operations service providing cleanup, mount/unmount, partitioning, and SMART helpers.
 """
 import os
 import shutil
@@ -25,7 +24,7 @@ def _expand_path(path: str) -> Path:
 
 
 class StorageOperationError(Exception):
-    """存储操作异常"""
+    """Base exception raised for storage management failures."""
 
     def __init__(self, message: str, log_id: Optional[str] = None):
         super().__init__(message)
@@ -33,7 +32,7 @@ class StorageOperationError(Exception):
 
 
 class StorageOperations:
-    """提供管理员存储操作能力"""
+    """Implements administrative storage operations such as cleanup, mounts, and SMART tooling."""
 
     CLEANUP_TARGETS: Dict[str, List[str]] = {
         "tmp_dirs": ["/tmp", "/var/tmp"],
@@ -69,7 +68,7 @@ class StorageOperations:
             entries = list(self._operation_logs)
         return entries[:limit]
 
-    # -------------------------- 清理操作 --------------------------
+    # -------------------------- Cleanup operations --------------------------
 
     def _iter_paths_for_target(self, target: str, custom_path: Optional[str]) -> Iterable[Path]:
         if target == "custom":
@@ -163,7 +162,7 @@ class StorageOperations:
                                       status="failed", detail=detail, message=str(exc))
             raise StorageOperationError(f"清理失败: {exc}", log_id=log_id) from exc
 
-    # -------------------------- 挂载操作 --------------------------
+    # -------------------------- Mount operations --------------------------
 
     @staticmethod
     def _validate_device_path(device: str):
@@ -198,7 +197,7 @@ class StorageOperations:
                     cmd.extend(["-o", options])
                 cmd.extend([device, mountpoint])
             else:
-                # 默认优先使用挂载点卸载
+                # Prefer unmounting via the mount point when provided.
                 target = mountpoint or device
                 if not target:
                     raise StorageOperationError("卸载操作需要挂载点或设备")
@@ -224,7 +223,7 @@ class StorageOperations:
                                       message=str(exc))
             raise StorageOperationError(f"{action} 操作失败: {exc}", log_id=log_id) from exc
 
-    # -------------------------- 分区/格式化 --------------------------
+    # -------------------------- Partitioning and formatting --------------------------
 
     def _build_mkfs_command(self, filesystem: str, device: str, label: Optional[str], extra_args: Optional[str]) -> List[str]:
         if filesystem not in self.SUPPORTED_FILESYSTEMS:
@@ -310,7 +309,7 @@ class StorageOperations:
                                       message=str(exc))
             raise StorageOperationError(f"{operation} 操作失败: {exc}", log_id=log_id) from exc
 
-    # -------------------------- SMART 功能 --------------------------
+    # -------------------------- SMART utilities --------------------------
 
     @staticmethod
     def _run_smartctl(args: List[str]) -> subprocess.CompletedProcess:
@@ -435,5 +434,5 @@ class StorageOperations:
             raise StorageOperationError(f"获取 SMART 报告失败: {exc}", log_id=log_id) from exc
 
 
-# 全局实例
+# Shared singleton instance.
 storage_operations = StorageOperations()

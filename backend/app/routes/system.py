@@ -1,5 +1,5 @@
 """
-系统管理相关路由
+System management API endpoints.
 """
 from fastapi import APIRouter, Depends, HTTPException, Response
 from pydantic import BaseModel
@@ -14,10 +14,10 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/system", tags=["系统管理"])
 
 
-# ==================== 数据模型 ====================
+# ==================== Data models ====================
 
 class PowerRequest(BaseModel):
-    action: str  # "restart" 或 "shutdown"
+    action: str  # Allowed values: "restart" or "shutdown".
 
 
 class PowerResponse(BaseModel):
@@ -26,14 +26,12 @@ class PowerResponse(BaseModel):
     scheduled_time: str
 
 
-# ==================== 路由处理器 ====================
+# ==================== Route handlers ====================
 
 @router.get("/status")
 async def get_system_status():
     """
-    获取系统状态
-    
-    返回: CPU、内存、磁盘、网络等实时信息
+    Retrieve host utilization metrics including CPU, memory, disk, and network usage.
     """
     try:
         status = system_monitor.get_full_status()
@@ -55,10 +53,7 @@ async def get_system_status():
 )
 async def power_control(body: PowerRequest, response: Response):
     """
-    电源管理 (重启/关机)
-    
-    需要管理员权限
-    需要 CSRF Token
+    Execute a restart or shutdown via the privileged helper; requires admin session and CSRF token.
     """
     action = body.action.lower()
     

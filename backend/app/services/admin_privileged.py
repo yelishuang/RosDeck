@@ -12,9 +12,9 @@ AUTH_HELPER_PATH = os.environ.get(
 CONTROL_HELPER_DEFAULT = "/usr/local/libexec/rosdeck-control-helper"
 CONTROL_HELPER_CANDIDATES = [
     os.environ.get("ROSDECK_CONTROL_HELPER"),
-    os.environ.get("ROSDECK_POWER_HELPER"),  # legacy env variable
+    os.environ.get("ROSDECK_POWER_HELPER"),  # Legacy environment variable support.
     CONTROL_HELPER_DEFAULT,
-    "/usr/local/libexec/rosdeck-power-helper",  # legacy path
+    "/usr/local/libexec/rosdeck-power-helper",  # Legacy helper path.
 ]
 
 
@@ -60,7 +60,7 @@ def _run_helper(password: str, username: str = "root") -> bool:
 
 def verify_root_password(password: str) -> bool:
     """
-    Verify root password via privileged helper.
+    Validate the root password via the privileged helper binary.
     """
     return _run_helper(password, username="root")
 

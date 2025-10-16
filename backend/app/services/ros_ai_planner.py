@@ -1,6 +1,5 @@
 """
-ROS-AI 动作规划服务
-负责调用外部中转站，将自然语言转换为运动指令 JSON。
+ROS-AI motion planning service that proxies natural language commands to an external aggregator.
 """
 from __future__ import annotations
 
@@ -15,7 +14,7 @@ from typing import Any, Dict, List, Optional
 logger = logging.getLogger(__name__)
 
 
-# 默认中转站配置，可通过环境变量覆盖
+# Defaults for the aggregation proxy; overridable via environment variables.
 DEFAULT_API_HOST = "api.gpt.ge"
 DEFAULT_API_PATH = "/v1/chat/completions"
 DEFAULT_MODEL_NAME = "gpt-5-mini-2025-08-07"
@@ -41,11 +40,11 @@ PROXY_ENV_VARS = [
 
 
 class RosAIAggregatorError(RuntimeError):
-    """调用中转站失败。"""
+    """Raised when the AI aggregation proxy call fails."""
 
 
 class RosAIAggregatorConfigError(RosAIAggregatorError):
-    """配置缺失导致无法调用中转站。"""
+    """Raised when required proxy configuration is missing."""
 
 
 @dataclass(frozen=True)
@@ -57,22 +56,22 @@ class _ProxyConfig:
 
 
 class RosAIPlanner:
-    """封装 AI 中转站交互流程。"""
+    """Encapsulates the RosDeck AI proxy interaction workflow."""
 
     def __init__(self) -> None:
         self._proxy_cleared = False
         self._proxy_lock = threading.Lock()
 
-    # ------------------------ 对外接口 ------------------------ #
+    # ------------------------ Public interface ------------------------ #
     async def generate_motion_plan(
         self,
         command: str,
         history: Optional[List[Dict[str, str]]] = None,
     ) -> Dict[str, Any]:
         """
-        异步接口：生成动作计划并返回 {"commands": [...]}。
+        Asynchronously produce a turtlesim motion plan and return {"commands": [...]}.
 
-        使用 run_in_threadpool 调度同步调用，避免阻塞事件循环。
+        Delegates to the synchronous helper via FastAPI's threadpool to avoid blocking.
         """
         from fastapi.concurrency import run_in_threadpool
 
@@ -84,7 +83,7 @@ class RosAIPlanner:
 
     def get_status(self) -> Dict[str, Any]:
         """
-        返回中转站配置状态。主要用于前端健康检查。
+        Return the current proxy configuration status for health checks.
         """
         try:
             config = self._load_config()
@@ -104,7 +103,7 @@ class RosAIPlanner:
             "host": config.host,
         }
 
-    # ------------------------ 同步实现 ------------------------ #
+    # ------------------------ Synchronous implementation ------------------------ #
     def _generate_motion_plan_sync(
         self,
         command: str,
@@ -137,7 +136,7 @@ class RosAIPlanner:
         )
         return self._extract_json_content(api_response)
 
-    # ------------------------ 代理处理 ------------------------ #
+    # ------------------------ Proxy environment handling ------------------------ #
     def _clear_proxy_environment_once(self) -> None:
         if self._proxy_cleared:
             return
@@ -155,7 +154,7 @@ class RosAIPlanner:
                 )
             self._proxy_cleared = True
 
-    # ------------------------ 配置 ------------------------ #
+    # ------------------------ Configuration helpers ------------------------ #
     def _load_config(self) -> _ProxyConfig:
         host = os.getenv(ENV_HOST, DEFAULT_API_HOST).strip() or DEFAULT_API_HOST
         path = os.getenv(ENV_PATH, DEFAULT_API_PATH).strip() or DEFAULT_API_PATH
@@ -171,7 +170,7 @@ class RosAIPlanner:
 
         return _ProxyConfig(host=host, path=path, model=model, api_key=api_key)
 
-    # ------------------------ Prompt ------------------------ #
+    # ------------------------ Prompt builders ------------------------ #
     @staticmethod
     def _build_system_prompt() -> str:
         return (
@@ -286,7 +285,7 @@ class RosAIPlanner:
             {"role": "system", "content": self._build_system_prompt()}
         ]
 
-        # 历史记录目前仅用于上下文提醒，取最近的 4 条（互相交替的 user/assistant）
+        # Include up to four alternating user/assistant messages for lightweight context.
         if history:
             for entry in history[-4:]:
                 role = entry.get("role")
@@ -318,7 +317,7 @@ class RosAIPlanner:
 
         return payload
 
-    # ------------------------ API 调用 ------------------------ #
+    # ------------------------ API interaction ------------------------ #
     def _call_api(
         self,
         *,
@@ -370,7 +369,7 @@ class RosAIPlanner:
                 return self._call_api(payload=payload_required, config=config)
             raise
 
-    # ------------------------ 响应解析 ------------------------ #
+    # ------------------------ Response parsing ------------------------ #
     @staticmethod
     def _extract_json_content(api_response: Dict[str, Any]) -> Dict[str, Any]:
         choices = api_response.get("choices")
@@ -417,5 +416,5 @@ class RosAIPlanner:
         raise RosAIAggregatorError("未找到 emit_commands 的 tool 调用")
 
 
-# 全局实例
+# Shared singleton instance.
 ros_ai_planner = RosAIPlanner()

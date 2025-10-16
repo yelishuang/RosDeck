@@ -1,5 +1,5 @@
 """
-rosbag2 导出工具
+rosbag2 export helpers supporting JSON and CSV output.
 """
 from __future__ import annotations
 
@@ -53,14 +53,14 @@ def export_bag(
     end_time_ns: Optional[int] = None,
 ) -> Path:
     """
-    导出 bag 数据为 CSV/JSON
+    Export bag data as CSV or JSON within the `exports` subdirectory.
 
     Args:
-        bag_path: bag 目录
-        output_format: "json" 或 "csv"
-        topics: 要导出的主题列表，None 表示全部
-        start_time_ns: 起始时间戳（纳秒）
-        end_time_ns: 结束时间戳（纳秒）
+        bag_path: Path to the rosbag directory.
+        output_format: Either "json" or "csv".
+        topics: Optional list of topic names to include.
+        start_time_ns: Optional inclusive start timestamp in nanoseconds.
+        end_time_ns: Optional inclusive end timestamp in nanoseconds.
     """
     _require_dependencies()
 
@@ -134,4 +134,3 @@ def export_bag(
                 ])
 
     return output_path
-

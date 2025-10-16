@@ -16,24 +16,24 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/runtime", tags=["运行中心"])
 
 
-# Helper function to validate CSRF token
+# Helper: validate CSRF tokens against the server-side value.
 def validate_csrf_token(token: Optional[str]) -> bool:
-    """Validate CSRF token against stored token."""
+    """Return True when the provided token matches the stored CSRF token."""
     expected_token = csrf_protection.get_token()
     return token is not None and token == expected_token
 
 
-# Request models
+# Request payload models.
 class KillProcessRequest(BaseModel):
     pid: int
 
 
 class ServiceActionRequest(BaseModel):
     service_name: str
-    action: str  # start, stop, restart, enable, disable
+    action: str  # Supported actions: start, stop, restart, enable, disable.
 
 
-# Routes
+# Route handlers.
 @router.get("/processes")
 async def get_processes(sort_by: str = "cpu", limit: int = 500):
     """
@@ -62,11 +62,11 @@ async def kill_process(
     Terminate a process by PID.
     Requires admin mode and CSRF token.
     """
-    # Validate admin session
+    # Ensure the caller holds a valid admin session.
     if not admin_session_id or not admin_auth.validate_session(admin_session_id):
         raise HTTPException(status_code=403, detail="Admin privileges required")
 
-    # Validate CSRF token
+    # Enforce CSRF token verification.
     if not validate_csrf_token(x_csrf_token):
         raise HTTPException(status_code=403, detail="Invalid CSRF token")
 
@@ -114,11 +114,11 @@ async def service_action(
     Requires admin mode and CSRF token.
     Actions: start, stop, restart, enable, disable
     """
-    # Validate admin session
+    # Ensure the caller holds a valid admin session.
     if not admin_session_id or not admin_auth.validate_session(admin_session_id):
         raise HTTPException(status_code=403, detail="Admin privileges required")
 
-    # Validate CSRF token
+    # Enforce CSRF token verification.
     if not validate_csrf_token(x_csrf_token):
         raise HTTPException(status_code=403, detail="Invalid CSRF token")
 
